@@ -219,7 +219,7 @@ export default function CustomerDetailScreen() {
         <View style={styles.actions}>
           <Button
             title="View Loans"
-            style={{ borderRadius: 4 }}
+            style={{ borderRadius: 6 }}
             variant="primary"
             fullWidth
             size="lg"
@@ -235,7 +235,7 @@ export default function CustomerDetailScreen() {
           <Button
             title="Edit Customer"
             style={{
-              borderRadius: 4,
+              borderRadius: 6,
               backgroundColor: colors.surfaceSecondary,
             }}
             variant="outline"

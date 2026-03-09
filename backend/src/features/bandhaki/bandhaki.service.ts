@@ -74,6 +74,14 @@ export class BandhakiService {
       principalAmount: entry.principalAmount || 0,
       paymentStatus: entry.paymentStatus || "pending",
       status: entry.status || "active",
+      loanDate: entry.loanDate,
+      customer: entry.customer
+        ? {
+            _id: entry.customer._id.toString(),
+            name: entry.customer.name || "Unknown",
+            phone: entry.customer.phone || "",
+          }
+        : undefined,
     }));
   }
 

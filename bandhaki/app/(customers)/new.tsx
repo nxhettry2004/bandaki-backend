@@ -150,7 +150,7 @@ export default function NewCustomerScreen() {
           loading={loading}
           fullWidth
           size="lg"
-          style={{ marginTop: 24, borderRadius: 4 }}
+          style={{ marginTop: 24, borderRadius: 6 }}
         />
       </ScrollView>
     </SafeAreaView>

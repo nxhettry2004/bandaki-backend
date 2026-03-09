@@ -181,7 +181,7 @@ export default function AllLoansScreen() {
           </Text>
         </View>
         <TouchableOpacity
-          style={[styles.newBtn, { backgroundColor: colors.primary }]}
+          style={[styles.newBtn, { backgroundColor: colors.primary,borderRadius: 6 }]}
           onPress={() => router.push("/(bandhaki)/new")}
           activeOpacity={0.8}
         >

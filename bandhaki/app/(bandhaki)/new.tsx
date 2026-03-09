@@ -15,7 +15,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
-import { ArrowLeft, Camera, Plus, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Camera, Trash2 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { BandhakiFormSchema, type BandhakiFormSchemaType } from '../../src/schema/FormSchema';
@@ -317,26 +317,40 @@ export default function NewBandhakiScreen() {
 
         {/* Images */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Loan Images</Text>
-        <View style={styles.imagesRow}>
-          {images.map((img, idx) => (
-            <View key={idx} style={[styles.imageThumb, { backgroundColor: colors.surfaceSecondary }]}>
-              <Image source={{ uri: img.url }} style={styles.imagePreview} resizeMode="cover" />
-              <Text style={[styles.imageName, { color: colors.text }]} numberOfLines={1}>
-                {img.name}
-              </Text>
-              <TouchableOpacity onPress={() => removeImage(idx)}>
-                <Trash2 size={14} color={colors.error} />
-              </TouchableOpacity>
-            </View>
-          ))}
-          <TouchableOpacity
-            style={[styles.addImageBtn, { borderColor: colors.border }]}
-            onPress={pickImage}
-          >
-            <Camera size={20} color={colors.textTertiary} />
-            <Text style={[styles.addImageText, { color: colors.textTertiary }]}>Add</Text>
-          </TouchableOpacity>
-        </View>
+
+        {/* Upload area */}
+        <TouchableOpacity
+          style={[styles.uploadArea, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }]}
+          onPress={pickImage}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.uploadIconBg, { backgroundColor: colors.primaryLight }]}>
+            <Camera size={28} color={colors.primary} />
+          </View>
+          <Text style={[styles.uploadTitle, { color: colors.text }]}>
+            {images.length > 0 ? 'Add More Photos' : 'Upload Photos'}
+          </Text>
+          <Text style={[styles.uploadSub, { color: colors.textTertiary }]}>
+            Tap to select images of gold items
+          </Text>
+        </TouchableOpacity>
+
+        {/* Image previews */}
+        {images.length > 0 && (
+          <View style={styles.imagesRow}>
+            {images.map((img, idx) => (
+              <View key={idx} style={[styles.imageThumb, { backgroundColor: colors.surfaceSecondary }]}>
+                <Image source={{ uri: img.url }} style={styles.imagePreview} resizeMode="cover" />
+                <TouchableOpacity
+                  style={[styles.imageRemoveBtn, { backgroundColor: colors.errorLight }]}
+                  onPress={() => removeImage(idx)}
+                >
+                  <Trash2 size={14} color={colors.error} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Submit */}
         <Button
@@ -345,7 +359,7 @@ export default function NewBandhakiScreen() {
           loading={loading}
           fullWidth
           size="lg"
-          style={{ marginTop: 24, marginBottom: 16 }}
+          style={{ marginTop: 24, marginBottom: 16, borderRadius: 6 }}
         />
       </ScrollView>
     </SafeAreaView>
@@ -375,34 +389,49 @@ const styles = StyleSheet.create({
   },
   dateText: { fontSize: 15 },
   sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12, marginTop: 8 },
+  uploadArea: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  uploadIconBg: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  uploadTitle: { fontSize: 15, fontWeight: '600' },
+  uploadSub: { fontSize: 12, marginTop: 4 },
   imagesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
     marginBottom: 8,
   },
   imageThumb: {
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    width: 88,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
   },
   imagePreview: {
-    width: 72,
-    height: 72,
-    borderRadius: 6,
-    marginBottom: 6,
-  },
-  imageName: { fontSize: 11, marginBottom: 4, textAlign: 'center' },
-  addImageBtn: {
-    width: 64,
-    height: 64,
+    width: 100,
+    height: 100,
     borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
+  },
+  imageRemoveBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
   },
-  addImageText: { fontSize: 10 },
 });

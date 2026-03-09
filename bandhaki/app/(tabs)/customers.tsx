@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 4,
+    borderRadius: 6,
     gap: 6,
   },
   addBtnText: { color: "#fff", fontSize: 16, fontWeight: "600" },

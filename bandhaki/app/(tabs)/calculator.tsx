@@ -191,6 +191,7 @@ export default function CalculatorScreen() {
               title="Calculate Interest"
               onPress={calculateInterest}
               fullWidth
+              style={{ borderRadius: 6 }}
               size="lg"
               icon={<CalcIcon size={18} color="#FFF" />}
             />
@@ -199,6 +200,7 @@ export default function CalculatorScreen() {
               onPress={clearCalculator}
               variant="outline"
               fullWidth
+              style={{ borderRadius: 6 }}
               size="lg"
             />
           </View>

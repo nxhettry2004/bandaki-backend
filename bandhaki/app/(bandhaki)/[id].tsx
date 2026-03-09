@@ -470,6 +470,7 @@ export default function LoanDetailScreen() {
         <View style={styles.actions}>
           <Button
             title="Record Payment"
+            style={{borderRadius: 6}}
             variant="primary"
             fullWidth
             size="lg"
@@ -478,6 +479,7 @@ export default function LoanDetailScreen() {
           />
           <Button
             title="Edit Loan"
+            style={{borderRadius: 6}}
             variant="outline"
             fullWidth
             onPress={() => router.push(`/(bandhaki)/update/${id}`)}

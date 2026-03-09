@@ -36,7 +36,7 @@ export class BandhakiRepository {
       tenantId,
     })
       .populate("customer", "name phone")
-      .select("loanNumber principalAmount paymentStatus status customer")
+      .select("loanNumber principalAmount paymentStatus status customer loanDate")
       .sort({ createdAt: -1 })
       .lean();
   }
