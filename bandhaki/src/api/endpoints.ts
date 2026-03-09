@@ -102,6 +102,7 @@ export async function getAllBandhaki(params: {
   page?: number;
   limit?: number;
   query?: string;
+  status?: string;
 }): Promise<PaginatedResponse<LoanListEntry>> {
   const res = await apiClient.get('/api/bandhaki', { params });
   return res.data?.data;

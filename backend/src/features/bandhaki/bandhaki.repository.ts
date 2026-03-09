@@ -5,6 +5,7 @@ export interface PaginationOptions {
   page: number;
   limit: number;
   query?: string;
+  status?: string;
 }
 
 export interface PaginatedResult {
@@ -52,10 +53,18 @@ export class BandhakiRepository {
   }
 
   async findPaginated(tenantId: string, options: PaginationOptions): Promise<PaginatedResult> {
-    const { page, limit, query } = options;
+    const { page, limit, query, status } = options;
     const skip = (page - 1) * limit;
 
     let filter: Record<string, unknown> = { tenantId };
+
+    if (status && status !== 'all') {
+      if (status === 'active') {
+        filter.status = { $in: ['active', 'defaulted'] };
+      } else {
+        filter.status = status;
+      }
+    }
 
     if (query) {
       const searchRegex = new RegExp(query, "i");
@@ -69,7 +78,7 @@ export class BandhakiRepository {
       const customerIds = matchingCustomers.map((c) => c._id);
 
       filter = {
-        tenantId,
+        ...filter,
         $or: [
           { loanNumber: searchRegex },
           { customer: { $in: customerIds } },

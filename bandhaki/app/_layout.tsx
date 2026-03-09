@@ -58,6 +58,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     };
   }, [segments, router]);
 
+  if (!isReady) return null;
+
   return <>{children}</>;
 }
 

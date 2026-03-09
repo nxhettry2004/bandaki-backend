@@ -40,7 +40,7 @@ export function EmptyState({
           onPress={onAction}
           variant="primary"
           size="sm"
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 16,borderRadius: 4 }}
         />
       )}
     </View>

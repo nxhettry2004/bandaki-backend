@@ -1,16 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Pressable,
   ActivityIndicator,
   RefreshControl,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ArrowLeft,
   Plus,
@@ -18,115 +17,172 @@ import {
   Wallet,
   ChevronRight,
   ChevronLeft,
-} from 'lucide-react-native';
+} from "lucide-react-native";
 
-import { useLoans } from '../../src/hooks/useLoans';
-import { useTheme } from '../../src/hooks/useTheme';
-import { SearchBar } from '../../src/components/ui/SearchBar';
-import { StatusBadge } from '../../src/components/ui/StatusBadge';
-import { EmptyState } from '../../src/components/ui/EmptyState';
-import type { LoanListEntry } from '../../src/types';
+import { useLoans } from "../../src/hooks/useLoans";
+import { useTheme } from "../../src/hooks/useTheme";
+import { SearchBar } from "../../src/components/ui/SearchBar";
+import { StatusBadge } from "../../src/components/ui/StatusBadge";
+import { EmptyState } from "../../src/components/ui/EmptyState";
+import type { LoanListEntry } from "../../src/types";
 
 export default function AllLoansScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const limit = 15;
 
-  const { data, isLoading, refetch, isRefetching } = useLoans({ page, limit, query });
+  const { data, isLoading, refetch, isRefetching } = useLoans({
+    page,
+    limit,
+    query,
+    status: statusFilter,
+  });
 
   const loans = data?.loans || [];
-  const pagination = data?.pagination || { currentPage: 1, totalPages: 1, totalCount: 0, limit };
+  const pagination = data?.pagination || {
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    limit,
+  };
 
   const handleSearch = useCallback((text: string) => {
     setQuery(text);
     setPage(1);
   }, []);
 
+  const handleStatusFilter = (s: string) => {
+    setStatusFilter(s);
+    setPage(1);
+  };
+
   const goToLoan = (id: string) => {
     router.push(`/(bandhaki)/${id}`);
   };
 
   const renderLoan = ({ item }: { item: LoanListEntry }) => (
-      <Pressable
-        style={({ pressed }) => [styles.loanPressable, pressed && styles.loanPressed]}
+    <TouchableOpacity
+      activeOpacity={0.75}
       onPress={() => goToLoan(item._id)}
+      style={styles.loanPressable}
     >
-      <View style={[styles.loanCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-      {/* Top row: loan number + status */}
-      <View style={styles.loanCardTop}>
-        <View style={[styles.loanNumberBadge, { backgroundColor: colors.primaryLight }]}>
-          <Text style={[styles.loanNumberText, { color: colors.primary }]}>{item.loanNumber}</Text>
-        </View>
-        <StatusBadge status={item.status} />
-      </View>
-
-      {/* Middle row: customer + amount */}
-      <View style={styles.loanCardMiddle}>
-        <View style={styles.customerInfo}>
-          <View style={[styles.avatar, { backgroundColor: colors.surfaceSecondary }]}>
-            <Text style={[styles.avatarText, { color: colors.textSecondary }]}>
-              {item.customer?.name?.charAt(0) || item.customerName?.charAt(0) || 'U'}
+      <View
+        style={[
+          styles.loanCard,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+      >
+        {/* Top row: loan number + status */}
+        <View style={styles.loanCardTop}>
+          <View
+            style={[
+              styles.loanNumberBadge,
+              { backgroundColor: colors.primaryLight },
+            ]}
+          >
+            <Text style={[styles.loanNumberText, { color: colors.primary }]}>
+              {item.loanNumber}
             </Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>
-              {item.customer?.name || item.customerName || 'Unknown'}
+          <StatusBadge status={item.status} />
+        </View>
+
+        {/* Middle row: customer + amount */}
+        <View style={styles.loanCardMiddle}>
+          <View style={styles.customerInfo}>
+            <View
+              style={[
+                styles.avatar,
+                { backgroundColor: colors.surfaceSecondary },
+              ]}
+            >
+              <Text
+                style={[styles.avatarText, { color: colors.textSecondary }]}
+              >
+                {item.customer?.name?.charAt(0) ||
+                  item.customerName?.charAt(0) ||
+                  "U"}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[styles.customerName, { color: colors.text }]}
+                numberOfLines={1}
+              >
+                {item.customer?.name || item.customerName || "Unknown"}
+              </Text>
+              <Text
+                style={[styles.customerPhone, { color: colors.textTertiary }]}
+              >
+                {item.customer?.phone || item.customerPhone || ""}
+              </Text>
+            </View>
+          </View>
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={[styles.amountLabel, { color: colors.textTertiary }]}>
+              Principal
             </Text>
-            <Text style={[styles.customerPhone, { color: colors.textTertiary }]}>
-              {item.customer?.phone || item.customerPhone || ''}
+            <Text style={[styles.amountValue, { color: colors.success }]}>
+              Rs. {item.principalAmount?.toLocaleString() || "0"}
             </Text>
           </View>
         </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={[styles.amountLabel, { color: colors.textTertiary }]}>Principal</Text>
-          <Text style={[styles.amountValue, { color: colors.success }]}>
-            Rs. {item.principalAmount?.toLocaleString() || '0'}
-          </Text>
-        </View>
-      </View>
 
-      {/* Bottom row: date + payment status */}
-      <View style={[styles.loanCardBottom, { borderTopColor: colors.border }]}>
-        <View style={styles.loanMeta}>
-          <Calendar size={13} color={colors.textTertiary} />
-          <Text style={[styles.metaText, { color: colors.textTertiary }]}>
-            {item.loanDate
-              ? new Date(item.loanDate).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: '2-digit',
-                })
-              : '—'}
-          </Text>
-          <Wallet size={13} color={colors.textTertiary} style={{ marginLeft: 12 }} />
-          <Text style={[styles.metaText, { color: colors.textTertiary }]}>
-            {item.paymentStatus}
-          </Text>
+        {/* Bottom row: date + payment status */}
+        <View
+          style={[styles.loanCardBottom, { borderTopColor: colors.border }]}
+        >
+          <View style={styles.loanMeta}>
+            <Calendar size={13} color={colors.textTertiary} />
+            <Text style={[styles.metaText, { color: colors.textTertiary }]}>
+              {item.loanDate
+                ? new Date(item.loanDate).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "2-digit",
+                  })
+                : "—"}
+            </Text>
+            <Wallet
+              size={13}
+              color={colors.textTertiary}
+              style={{ marginLeft: 12 }}
+            />
+            <Text style={[styles.metaText, { color: colors.textTertiary }]}>
+              {item.paymentStatus}
+            </Text>
+          </View>
+          <ChevronRight size={16} color={colors.textTertiary} />
         </View>
-        <ChevronRight size={16} color={colors.textTertiary} />
       </View>
-    </View>
-    </Pressable>
+    </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>All Loans</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            All Loans
+          </Text>
+          <Text
+            style={[styles.headerSubtitle, { color: colors.textSecondary }]}
+          >
             {pagination.totalCount} total entries
           </Text>
         </View>
         <TouchableOpacity
           style={[styles.newBtn, { backgroundColor: colors.primary }]}
-          onPress={() => router.push('/(bandhaki)/new')}
+          onPress={() => router.push("/(bandhaki)/new")}
           activeOpacity={0.8}
         >
           <Plus size={18} color="#fff" />
@@ -134,13 +190,42 @@ export default function AllLoansScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
-      <View style={styles.searchWrap}>
-        <SearchBar
-          value={query}
-          onChangeText={handleSearch}
-          placeholder="Search by name, loan number..."
-        />
+      {/* Search + Filter */}
+      <View style={styles.searchFilterRow}>
+        <View style={styles.searchWrap}>
+          <SearchBar
+            value={query}
+            onChangeText={handleSearch}
+            placeholder="Search by name, loan number..."
+          />
+        </View>
+        <View style={styles.filterRow}>
+          {(["all", "active", "closed"] as const).map((s) => (
+            <TouchableOpacity
+              key={s}
+              activeOpacity={0.8}
+              onPress={() => handleStatusFilter(s)}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor:
+                    statusFilter === s ? colors.primary : colors.surface,
+                  borderColor:
+                    statusFilter === s ? colors.primary : colors.border,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  { color: statusFilter === s ? "#fff" : colors.textSecondary },
+                ]}
+              >
+                {s === "all" ? "All" : s === "active" ? "Active" : "Closed"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* List */}
@@ -150,11 +235,14 @@ export default function AllLoansScreen() {
         </View>
       ) : loans.length === 0 ? (
         <EmptyState
-        //   icon={Search}
           title="No loans found"
-          description={query ? 'Try adjusting your search' : 'Create your first loan to get started'}
-          actionLabel={query ? undefined : 'New Loan'}
-          onAction={query ? undefined : () => router.push('/(bandhaki)/new')}
+          description={
+            query
+              ? "Try adjusting your search"
+              : "Create your first loan to get started"
+          }
+          actionLabel={query ? undefined : "New Loan"}
+          onAction={query ? undefined : () => router.push("/(bandhaki)/new")}
         />
       ) : (
         <FlatList
@@ -163,7 +251,11 @@ export default function AllLoansScreen() {
           renderItem={renderLoan}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={colors.primary}
+            />
           }
           ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         />
@@ -171,11 +263,26 @@ export default function AllLoansScreen() {
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <View style={[styles.pagination, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+        <View
+          style={[
+            styles.pagination,
+            {
+              borderTopColor: colors.border,
+              backgroundColor: colors.background,
+            },
+          ]}
+        >
           <TouchableOpacity
             onPress={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            style={[styles.pageBtn, { opacity: page <= 1 ? 0.3 : 1, backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[
+              styles.pageBtn,
+              {
+                opacity: page <= 1 ? 0.3 : 1,
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
           >
             <ChevronLeft size={16} color={colors.text} />
           </TouchableOpacity>
@@ -183,9 +290,18 @@ export default function AllLoansScreen() {
             Page {pagination.currentPage} of {pagination.totalPages}
           </Text>
           <TouchableOpacity
-            onPress={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+            onPress={() =>
+              setPage((p) => Math.min(pagination.totalPages, p + 1))
+            }
             disabled={page >= pagination.totalPages}
-            style={[styles.pageBtn, { opacity: page >= pagination.totalPages ? 0.3 : 1, backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[
+              styles.pageBtn,
+              {
+                opacity: page >= pagination.totalPages ? 0.3 : 1,
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
           >
             <ChevronRight size={16} color={colors.text} />
           </TouchableOpacity>
@@ -198,42 +314,48 @@ export default function AllLoansScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     gap: 12,
   },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 18, fontWeight: "700" },
   headerSubtitle: { fontSize: 12 },
   newBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 0,
     gap: 6,
   },
-  newBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
-  loadingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  newBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  searchFilterRow: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  searchWrap: { marginBottom: 8 },
+  filterRow: { flexDirection: "row", gap: 8 },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  filterChipText: { fontSize: 12, fontWeight: "600" },
+  loadingCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
   listContent: { padding: 16, paddingBottom: 16 },
   loanPressable: {},
-  loanPressed: {
-    opacity: 0.7,
-  },
   loanCard: {
     borderWidth: 1,
     borderRadius: 14,
     padding: 14,
   },
   loanCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   loanNumberBadge: {
@@ -241,33 +363,50 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
   },
-  loanNumberText: { fontSize: 12, fontWeight: '600', fontFamily: 'monospace' },
+  loanNumberText: { fontSize: 12, fontWeight: "600", fontFamily: "monospace" },
   loanCardMiddle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 12,
   },
-  customerInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginRight: 12 },
-  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 14, fontWeight: '700' },
-  customerName: { fontSize: 15, fontWeight: '600' },
+  customerInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    marginRight: 12,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { fontSize: 14, fontWeight: "700" },
+  customerName: { fontSize: 15, fontWeight: "600" },
   customerPhone: { fontSize: 12, marginTop: 2 },
-  amountLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  amountValue: { fontSize: 15, fontWeight: '700', marginTop: 2 },
+  amountLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  amountValue: { fontSize: 15, fontWeight: "700", marginTop: 2 },
   loanCardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingTop: 10,
     borderTopWidth: 1,
   },
-  loanMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  loanMeta: { flexDirection: "row", alignItems: "center", gap: 5 },
   metaText: { fontSize: 12 },
   pagination: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 16,
     paddingVertical: 12,
     borderTopWidth: 1,

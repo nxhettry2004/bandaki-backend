@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,77 +11,97 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   PlusCircle,
-  Landmark,
   ChevronRight,
+  Phone,
+  MapPin,
 } from "lucide-react-native";
 
-import { useCustomers } from "../../src/hooks/useCustomers";
+import { useActiveLoans } from "../../src/hooks/useLoans";
 import { useTheme } from "../../src/hooks/useTheme";
 import { SearchBar } from "../../src/components/ui/SearchBar";
 import { Card } from "../../src/components/ui/Card";
 import { EmptyState } from "../../src/components/ui/EmptyState";
 import { LoadingSkeleton } from "../../src/components/ui/Loading";
-import type { Customer } from "../../src/types";
+
+type ActiveCustomer = { _id: string; name: string; phone?: string; address?: string };
 
 export default function BandhakiTab() {
   const { colors } = useTheme();
   const router = useRouter();
-  const {
-    data: customers = [],
-    isLoading,
-    refetch,
-    isRefetching,
-  } = useCustomers();
+  const { data: activeLoans = [], isLoading, refetch, isRefetching } = useActiveLoans();
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Derive unique customers from active loans
+  const allCustomers = useMemo<ActiveCustomer[]>(() => {
+    const seen = new Set<string>();
+    const result: ActiveCustomer[] = [];
+    activeLoans.forEach((loan) => {
+      const c = loan.customer;
+      if (c && c._id && !seen.has(c._id)) {
+        seen.add(c._id);
+        result.push(c as ActiveCustomer);
+      }
+    });
+    return result;
+  }, [activeLoans]);
+
   const filteredCustomers = searchQuery
-    ? customers.filter(
-        (c: Customer) =>
+    ? allCustomers.filter(
+        (c) =>
           c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           c.phone?.includes(searchQuery),
       )
-    : customers;
+    : allCustomers;
 
-  const handleCustomerPress = (customer: Customer) => {
+  const handleCustomerPress = (customer: ActiveCustomer) => {
     router.push(
       `/(bandhaki)/customer-loans?customerId=${customer._id}&customerName=${encodeURIComponent(customer.name)}`,
     );
   };
 
   const renderCustomer = useCallback(
-    ({ item }: { item: Customer }) => (
+    ({ item }: { item: ActiveCustomer }) => (
       <TouchableOpacity
+        activeOpacity={1}
         onPress={() => handleCustomerPress(item)}
-        activeOpacity={0.7}
+        style={styles.customerPressable}
       >
         <Card style={styles.customerCard}>
-          <View style={styles.customerRow}>
+          <View style={styles.cardRow}>
             <View
-              style={[
-                styles.customerAvatar,
-                { backgroundColor: colors.primaryLight },
-              ]}
+              style={[styles.avatar, { backgroundColor: colors.purpleLight }]}
             >
-              <Text style={[styles.avatarLetter, { color: colors.primary }]}>
+              <Text style={[styles.avatarText, { color: colors.purple }]}>
                 {item.name.charAt(0).toUpperCase()}
               </Text>
             </View>
-            <View style={styles.customerInfo}>
+            <View style={styles.cardInfo}>
               <Text
-                style={[styles.customerName, { color: colors.text }]}
+                style={[styles.name, { color: colors.text }]}
                 numberOfLines={1}
               >
                 {item.name}
               </Text>
               {item.phone && (
-                <Text
-                  style={[
-                    styles.customerPhone,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  {item.phone}
-                </Text>
+                <View style={styles.infoRow}>
+                  <Phone size={12} color={colors.textTertiary} />
+                  <Text
+                    style={[styles.infoText, { color: colors.textSecondary }]}
+                  >
+                    {item.phone}
+                  </Text>
+                </View>
+              )}
+              {item.address && (
+                <View style={styles.infoRow}>
+                  <MapPin size={12} color={colors.textTertiary} />
+                  <Text
+                    style={[styles.infoText, { color: colors.textSecondary }]}
+                    numberOfLines={1}
+                  >
+                    {item.address}
+                  </Text>
+                </View>
               )}
             </View>
             <ChevronRight size={20} color={colors.textTertiary} />
@@ -101,23 +121,17 @@ export default function BandhakiTab() {
         <View>
           <Text style={styles.titleLight}>Bandhaki</Text>
           <Text style={styles.subtitleLight}>
-            Select a customer to view loans
+            {allCustomers.length} customers with active loans
           </Text>
         </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.headerBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push("/(bandhaki)/all")}
-          >
-            <Landmark size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.headerBtn, { backgroundColor: "#FFFFFF" }]}
-            onPress={() => router.push("/(bandhaki)/new")}
-          >
-            <PlusCircle size={18} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.addBtn, { backgroundColor: colors.primary }]}
+          onPress={() => router.push("/(bandhaki)/new")}
+          activeOpacity={0.8}
+        >
+          <PlusCircle size={18} color="#fff" />
+          <Text style={styles.addBtnText}>Add</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Search */}
@@ -147,11 +161,11 @@ export default function BandhakiTab() {
           }
           ListEmptyComponent={
             <EmptyState
-              title="No customers found"
+              title="No bandhaki found"
               description={
                 searchQuery
                   ? "Try a different search term"
-                  : "Add your first customer to get started"
+                  : "Add bandhaki to get started"
               }
               actionLabel={searchQuery ? undefined : "Add Customer"}
               onAction={
@@ -179,31 +193,30 @@ const styles = StyleSheet.create({
   titleLight: { fontSize: 24, fontWeight: "800", color: "#000" },
   subtitle: { fontSize: 13, marginTop: 2 },
   subtitleLight: { fontSize: 13, marginTop: 2, color: "#888" },
-  headerActions: { flexDirection: "row", gap: 8 },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  searchContainer: { paddingHorizontal: 16, marginBottom: 8 },
-  listContent: { paddingHorizontal: 16, paddingBottom: 16 },
-  customerCard: { marginBottom: 8 },
-  customerRow: {
+  addBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 4,
+    gap: 6,
   },
-  customerAvatar: {
-    width: 44,
-    height: 44,
+  addBtnText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  searchContainer: { paddingHorizontal: 16, marginBottom: 8 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 16 },
+  customerPressable: { marginBottom: 8 },
+  customerCard: { marginBottom: 0 },
+  cardRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  avatar: {
+    width: 48,
+    height: 48,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarLetter: { fontSize: 18, fontWeight: "700" },
-  customerInfo: { flex: 1 },
-  customerName: { fontSize: 15, fontWeight: "600" },
-  customerPhone: { fontSize: 13, marginTop: 2 },
+  avatarText: { fontSize: 20, fontWeight: "700" },
+  cardInfo: { flex: 1 },
+  name: { fontSize: 15, fontWeight: "600", marginBottom: 2 },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  infoText: { fontSize: 12 },
 });

@@ -41,9 +41,9 @@ function formatAmount(value?: number) {
 export default function CustomerLoansScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { customerId, name } = useLocalSearchParams<{
+  const { customerId, customerName: name } = useLocalSearchParams<{
     customerId: string;
-    name?: string;
+    customerName?: string;
   }>();
 
   const {

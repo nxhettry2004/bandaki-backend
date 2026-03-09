@@ -196,8 +196,8 @@ export class BandhakiService {
     };
   }
 
-  async getAll(tenantId: string, page = 1, limit = 10, query = ""): Promise<PaginatedResult> {
-    return this.bandhakiRepo.findPaginated(tenantId, { page, limit, query });
+  async getAll(tenantId: string, page = 1, limit = 10, query = "", status = ""): Promise<PaginatedResult> {
+    return this.bandhakiRepo.findPaginated(tenantId, { page, limit, query, status });
   }
 
   async update(id: string, tenantId: string, data: UpdateBandhakiInput) {

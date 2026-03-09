@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getAllBandhaki, getActiveBandhaki } from '../api/endpoints';
 
-export function useLoans(params?: { page?: number; limit?: number; query?: string }) {
+export function useLoans(params?: { page?: number; limit?: number; query?: string; status?: string }) {
   return useQuery({
     queryKey: ['loans', params],
     queryFn: async () => {
