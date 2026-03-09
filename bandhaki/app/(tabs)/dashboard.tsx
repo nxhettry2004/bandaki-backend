@@ -136,9 +136,7 @@ export default function DashboardScreen() {
             <Text style={[styles.statNumber, { color: "#fff" }]}>
               {dashboardData?.totalCustomers ?? 0}
             </Text>
-            <Text
-              style={[styles.statLabel, { color: "rgba(255,255,255,0.8)" }]}
-            >
+            <Text style={[styles.statLabel, { color: "white" }]}>
               Total Clients
             </Text>
           </View>
@@ -165,7 +163,7 @@ export default function DashboardScreen() {
             <Text style={[styles.statNumber, { color: "#fff" }]}>
               {dashboardData?.activeLoans ?? 0}
             </Text>
-            <Text style={[styles.statLabel, { color: "white" }]}>
+            <Text style={[styles.statLabel, { color: "#fff" }]}>
               Active Loans
             </Text>
           </View>
@@ -366,7 +364,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statNumber: { fontSize: 28, fontWeight: "800" },
-  statLabel: { fontSize: 12, marginTop: 2 },
+  statLabel: { fontSize: 14, fontWeight: "500", marginTop: 2 },
   sectionTitle: {
     fontSize: 17,
     fontWeight: "600",

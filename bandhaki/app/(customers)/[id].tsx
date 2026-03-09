@@ -226,7 +226,7 @@ export default function CustomerDetailScreen() {
             onPress={() =>
               router.push({
                 pathname: "/(bandhaki)/customer-loans",
-                params: { customerId: id, name: customer.name },
+                params: { customerId: id, customerName: customer.name },
               })
             }
             icon={<FileText size={18} color="#fff" />}

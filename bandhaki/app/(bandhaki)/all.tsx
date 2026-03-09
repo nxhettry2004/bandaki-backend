@@ -31,7 +31,7 @@ export default function AllLoansScreen() {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
   const limit = 15;
 
   const { data, isLoading, refetch, isRefetching } = useLoans({
@@ -181,7 +181,10 @@ export default function AllLoansScreen() {
           </Text>
         </View>
         <TouchableOpacity
-          style={[styles.newBtn, { backgroundColor: colors.primary,borderRadius: 6 }]}
+          style={[
+            styles.newBtn,
+            { backgroundColor: colors.primary, borderRadius: 6 },
+          ]}
           onPress={() => router.push("/(bandhaki)/new")}
           activeOpacity={0.8}
         >
