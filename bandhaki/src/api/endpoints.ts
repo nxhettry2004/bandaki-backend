@@ -23,10 +23,18 @@ import type {
 
 export async function loginApi(data: LoginFormSchemaType): Promise<LoginResponse> {
   const res = await apiClient.post('/api/auth/login', data);
-  if (res.data.success && res.data.token) {
-    await setToken(res.data.token);
+  const payload = res.data?.data;
+  if (res.data?.success && payload?.token) {
+    await setToken(payload.token);
   }
-  return res.data;
+
+  return {
+    success: !!res.data?.success,
+    message: res.data?.message || 'Login failed',
+    token: payload?.token,
+    user: payload?.user,
+    errors: res.data?.errors,
+  };
 }
 
 export async function getMe(): Promise<User | null> {
@@ -34,29 +42,24 @@ export async function getMe(): Promise<User | null> {
     const token = await getToken();
     if (!token) return null;
     const res = await apiClient.get<AuthMeResponse>('/api/auth/me');
-    return res.data.user || null;
+    return (res.data as any)?.data || null;
   } catch {
     return null;
   }
 }
 
 export async function logoutApi(): Promise<void> {
-  try {
-    await apiClient.post('/api/auth/logout');
-  } catch {
-    // ignore
-  }
   await removeToken();
 }
 
 export async function validateSetupToken(token: string) {
-  const res = await apiClient.post('/api/auth/validate-token', { token });
-  return res.data;
+  const res = await apiClient.get(`/api/auth/validate-token/${token}`);
+  return res.data?.data;
 }
 
 export async function setupPassword(data: { token: string; password: string; confirmPassword: string }) {
   const res = await apiClient.post('/api/auth/setup-password', data);
-  return res.data;
+  return res.data?.data;
 }
 
 // ==================== Dashboard ====================
@@ -70,12 +73,12 @@ export async function getDashboard(): Promise<DashboardData> {
 
 export async function getCustomers(): Promise<Customer[]> {
   const res = await apiClient.get('/api/customers');
-  return res.data.customers || [];
+  return res.data?.data?.customers || [];
 }
 
 export async function getCustomerById(id: string): Promise<Customer> {
   const res = await apiClient.get(`/api/customers/${id}`);
-  return res.data.customer;
+  return res.data?.data;
 }
 
 export async function createCustomer(data: CustomerFormData): Promise<ApiResponse> {
@@ -92,7 +95,7 @@ export async function updateCustomer(id: string, data: CustomerFormData): Promis
 
 export async function getActiveBandhaki(): Promise<{ loans: LoanListEntry[] }> {
   const res = await apiClient.get('/api/bandhaki/active');
-  return res.data;
+  return res.data?.data;
 }
 
 export async function getAllBandhaki(params: {
@@ -101,17 +104,17 @@ export async function getAllBandhaki(params: {
   query?: string;
 }): Promise<PaginatedResponse<LoanListEntry>> {
   const res = await apiClient.get('/api/bandhaki', { params });
-  return res.data;
+  return res.data?.data;
 }
 
 export async function getBandhakiById(id: string): Promise<{ entry: DetailedLoanEntry }> {
   const res = await apiClient.get(`/api/bandhaki/${id}`);
-  return res.data;
+  return res.data?.data;
 }
 
 export async function getBandhakiByCustomer(customerId: string): Promise<{ loans: DetailedLoanEntry[] }> {
   const res = await apiClient.get(`/api/bandhaki/customer/${customerId}`);
-  return res.data;
+  return res.data?.data;
 }
 
 export async function createBandhaki(data: BandhakiFormData): Promise<ApiResponse<Bandhaki>> {
@@ -146,7 +149,7 @@ export async function createPayment(data: PaymentFormData): Promise<ApiResponse 
 
 export async function getPaymentsByBandhaki(bandhakiId: string): Promise<Payment[]> {
   const res = await apiClient.get(`/api/payments/bandhaki/${bandhakiId}`);
-  return res.data.payments || res.data || [];
+  return res.data?.data?.payments || [];
 }
 
 export { setToken, removeToken, getToken };

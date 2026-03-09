@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,19 +7,22 @@ import {
   Platform,
   ScrollView,
   Image,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useQueryClient } from '@tanstack/react-query';
-import Toast from 'react-native-toast-message';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
+import Toast from "react-native-toast-message";
 
-import { LoginFormSchema, type LoginFormSchemaType } from '../../src/schema/FormSchema';
-import { loginApi } from '../../src/api/endpoints';
-import { useTheme } from '../../src/hooks/useTheme';
-import { Input } from '../../src/components/ui/Input';
-import { Button } from '../../src/components/ui/Button';
-import { success } from 'zod';
+import {
+  LoginFormSchema,
+  type LoginFormSchemaType,
+} from "../../src/schema/FormSchema";
+import { loginApi } from "../../src/api/endpoints";
+import { useTheme } from "../../src/hooks/useTheme";
+import { Input } from "../../src/components/ui/Input";
+import { Button } from "../../src/components/ui/Button";
+import { success } from "zod";
 
 export default function LoginScreen() {
   const { colors } = useTheme();
@@ -34,31 +37,31 @@ export default function LoginScreen() {
   } = useForm<LoginFormSchemaType>({
     resolver: zodResolver(LoginFormSchema),
     defaultValues: {
-      username: '',
-      password: '',
+      username: "",
+      password: "",
     },
   });
 
   const onSubmit = async (data: LoginFormSchemaType) => {
     setLoading(true);
     try {
-      const result = {success: true,message:"Hi"};//await loginApi(data);
+      const result = await loginApi(data);
       if (result.success) {
-        await queryClient.invalidateQueries({ queryKey: ['currentUser'] });
-        Toast.show({ type: 'success', text1: 'Login successful' });
-        router.replace('/(tabs)/dashboard');
+        await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+        Toast.show({ type: "success", text1: "Login successful" });
+        router.replace("/(tabs)/dashboard");
       } else {
         Toast.show({
-          type: 'error',
-          text1: 'Login Failed',
-          text2: result.message || 'Invalid credentials',
+          type: "error",
+          text1: "Login Failed",
+          text2: result.message || "Invalid credentials",
         });
       }
     } catch (error: any) {
       Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: error?.response?.data?.message || 'Something went wrong',
+        type: "error",
+        text1: "Error",
+        text2: error?.response?.data?.message || "Something went wrong",
       });
     } finally {
       setLoading(false);
@@ -68,7 +71,7 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -76,7 +79,12 @@ export default function LoginScreen() {
       >
         {/* Logo / Brand */}
         <View style={styles.brandContainer}>
-          <View style={[styles.logoCircle, { backgroundColor: colors.primaryLight }]}>
+          <View
+            style={[
+              styles.logoCircle,
+              { backgroundColor: colors.primaryLight },
+            ]}
+          >
             <Text style={[styles.logoText, { color: colors.primary }]}>B</Text>
           </View>
           <Text style={[styles.title, { color: colors.text }]}>Bandhaki</Text>
@@ -87,7 +95,9 @@ export default function LoginScreen() {
 
         {/* Login Form */}
         <View style={[styles.formCard, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.formTitle, { color: colors.text }]}>Sign In</Text>
+          <Text style={[styles.formTitle, { color: colors.text }]}>
+            Sign In
+          </Text>
           <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>
             Enter your credentials to continue
           </Text>
@@ -151,29 +161,29 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
   brandContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 32,
   },
   logoCircle: {
     width: 72,
     height: 72,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
   logoText: {
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: -0.5,
   },
   subtitle: {
@@ -183,7 +193,7 @@ const styles = StyleSheet.create({
   formCard: {
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -191,7 +201,7 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 4,
   },
   formSubtitle: {
@@ -199,7 +209,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   footer: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 12,
     marginTop: 32,
   },

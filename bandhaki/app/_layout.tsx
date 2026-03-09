@@ -32,26 +32,31 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    let isMounted = true;
 
-  async function checkAuth() {
-    const token = await getToken();
-    setIsAuthenticated(!!token);
-    setIsReady(true);
-  }
+    const syncAuthAndRedirect = async () => {
+      const token = await getToken();
+      if (!isMounted) return;
 
-  useEffect(() => {
-    if (!isReady) return;
+      const authenticated = !!token;
+      setIsAuthenticated(authenticated);
+      setIsReady(true);
 
-    const inAuthGroup = segments[0] === '(auth)';
+      const inAuthGroup = segments[0] === '(auth)';
 
-    if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)/dashboard');
-    }
-  }, [isReady, isAuthenticated, segments]);
+      if (!authenticated && !inAuthGroup) {
+        router.replace('/(auth)/login');
+      } else if (authenticated && inAuthGroup) {
+        router.replace('/(tabs)/dashboard');
+      }
+    };
+
+    syncAuthAndRedirect();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [segments, router]);
 
   return <>{children}</>;
 }
