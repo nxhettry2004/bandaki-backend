@@ -83,11 +83,7 @@ export default function LoginScreen() {
       >
         {/* Logo / Brand */}
         <View style={styles.brandContainer}>
-          <View
-            style={[
-              styles.logoCircle,
-            ]}
-          >
+          <View style={[styles.logoCircle]}>
             <Image
               source={require("../../assets/images/noBg.png")}
               style={{ width: 126, height: 126 }}
@@ -158,7 +154,7 @@ export default function LoginScreen() {
             loading={loading}
             fullWidth
             size="lg"
-            style={{ marginTop: 8 }}
+            style={{ marginTop: 8, borderRadius: 6 }}
           />
         </View>
 
