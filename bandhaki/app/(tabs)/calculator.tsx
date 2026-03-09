@@ -87,6 +87,21 @@ export default function CalculatorScreen() {
     });
   };
 
+  const clearCalculator = () => {
+    setPrincipalAmount('');
+    setInterestRate('2.5');
+    setStartDate(new Date());
+    setEndDate(new Date());
+    setShowResults(false);
+    setSimpleInterest(0);
+    setCompoundInterest(0);
+    setTotalAmountSimple(0);
+    setTotalAmountCompound(0);
+    setTimePeriod(0);
+    setDaysDiff(0);
+    setErrors({});
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -171,13 +186,22 @@ export default function CalculatorScreen() {
             )}
           </View>
 
-          <Button
-            title="Calculate Interest"
-            onPress={calculateInterest}
-            fullWidth
-            size="lg"
-            icon={<CalcIcon size={18} color="#FFF" style={{ marginRight: 8 }} />}
-          />
+          <View style={styles.actionRow}>
+            <Button
+              title="Calculate Interest"
+              onPress={calculateInterest}
+              size="lg"
+              icon={<CalcIcon size={18} color="#FFF" />}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title="Clear"
+              onPress={clearCalculator}
+              variant="outline"
+              size="lg"
+              style={{ flex: 1 }}
+            />
+          </View>
         </Card>
 
         {/* Results */}
@@ -263,6 +287,10 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, marginTop: 2 },
   label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
   errorText: { fontSize: 12, marginTop: 4 },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   results: { marginTop: 16, gap: 12 },
   resultCard: { padding: 16 },
   resultTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12 },

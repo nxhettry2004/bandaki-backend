@@ -101,7 +101,7 @@ export interface BandhakiFormData {
   principalAmount: number;
   interestRate: number;
   interestType: InterestType;
-  goldItems: GoldItem;
+  goldItems: GoldItem[];
   images?: LoanImage[];
   totalValuation: number;
   status: string;

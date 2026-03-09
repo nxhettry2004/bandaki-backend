@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ViewStyle,
   TextStyle,
+  View,
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -41,20 +42,20 @@ export function Button({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 12,
+      borderRadius: 10,
       ...(fullWidth && { width: '100%' }),
     };
 
     // Size
     switch (size) {
       case 'sm':
-        Object.assign(base, { paddingHorizontal: 12, paddingVertical: 8 });
+        Object.assign(base, { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 });
         break;
       case 'lg':
-        Object.assign(base, { paddingHorizontal: 24, paddingVertical: 16 });
+        Object.assign(base, { paddingHorizontal: 24, paddingVertical: 16, borderRadius: 12 });
         break;
       default:
-        Object.assign(base, { paddingHorizontal: 20, paddingVertical: 12 });
+        Object.assign(base, { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 });
     }
 
     // Variant
@@ -142,9 +143,15 @@ export function Button({
           style={{ marginRight: title ? 8 : 0 }}
         />
       ) : icon ? (
-        <>{icon}</>
+        <View style={[styles.iconWrap, !title && { marginRight: 0 }]}>{icon}</View>
       ) : null}
       {title ? <Text style={[getTextStyle(), textStyle]}>{title}</Text> : null}
     </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  iconWrap: {
+    marginRight: 8,
+  },
+});

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Pressable,
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -36,9 +37,10 @@ export default function CustomersTab() {
 
   const renderCustomer = useCallback(
     ({ item }: { item: Customer }) => (
-      <TouchableOpacity
+      <Pressable
         onPress={() => router.push(`/(customers)/${item._id}`)}
-        activeOpacity={0.7}
+        style={styles.customerPressable}
+        android_ripple={{ color: colors.surfaceSecondary }}
       >
         <Card style={styles.customerCard}>
           <View style={styles.cardRow}>
@@ -74,7 +76,7 @@ export default function CustomersTab() {
             <ChevronRight size={20} color={colors.textTertiary} />
           </View>
         </Card>
-      </TouchableOpacity>
+      </Pressable>
     ),
     [colors]
   );
@@ -150,7 +152,12 @@ const styles = StyleSheet.create({
   },
   searchContainer: { paddingHorizontal: 16, marginBottom: 8 },
   listContent: { paddingHorizontal: 16, paddingBottom: 16 },
-  customerCard: { marginBottom: 8 },
+  customerPressable: {
+    marginBottom: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  customerCard: { marginBottom: 0 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
     width: 48,

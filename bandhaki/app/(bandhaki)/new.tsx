@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -94,6 +95,7 @@ export default function NewBandhakiScreen() {
       const result = await createBandhaki({
         ...data,
         interestType: data.interestType as 'simple' | 'compound',
+        goldItems: [data.goldItems],
         images,
       });
 
@@ -318,6 +320,7 @@ export default function NewBandhakiScreen() {
         <View style={styles.imagesRow}>
           {images.map((img, idx) => (
             <View key={idx} style={[styles.imageThumb, { backgroundColor: colors.surfaceSecondary }]}>
+              <Image source={{ uri: img.url }} style={styles.imagePreview} resizeMode="cover" />
               <Text style={[styles.imageName, { color: colors.text }]} numberOfLines={1}>
                 {img.name}
               </Text>
@@ -379,14 +382,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   imageThumb: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     padding: 8,
     borderRadius: 8,
-    maxWidth: '45%',
+    width: 88,
   },
-  imageName: { fontSize: 11, flex: 1 },
+  imagePreview: {
+    width: 72,
+    height: 72,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  imageName: { fontSize: 11, marginBottom: 4, textAlign: 'center' },
   addImageBtn: {
     width: 64,
     height: 64,

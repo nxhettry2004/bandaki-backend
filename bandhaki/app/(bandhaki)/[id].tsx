@@ -9,6 +9,7 @@ import {
   Alert,
   RefreshControl,
   FlatList,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -449,16 +450,19 @@ export default function LoanDetailScreen() {
                 Loan Images ({loan.images.length})
               </Text>
             </View>
+            <View style={styles.imageGrid}>
             {loan.images.map((img, index) => (
               <View
                 key={index}
                 style={[styles.imageItem, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
               >
+                <Image source={{ uri: img.url }} style={styles.imagePreview} resizeMode="cover" />
                 <Text style={[styles.imageItemText, { color: colors.text }]} numberOfLines={1}>
                   📄 {img.name || `Image ${index + 1}`}
                 </Text>
               </View>
             ))}
+            </View>
           </Card>
         )}
 
@@ -627,8 +631,20 @@ const styles = StyleSheet.create({
   imageItem: {
     borderRadius: 8,
     borderWidth: 1,
-    padding: 10,
+    padding: 8,
     marginBottom: 6,
+    width: '48%',
+  },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 110,
+    borderRadius: 6,
+    marginBottom: 8,
   },
   imageItemText: { fontSize: 13 },
   actions: { gap: 10, marginBottom: 16 },

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,10 +40,24 @@ export default function DashboardScreen() {
     refetch,
     isRefetching,
   } = useDashboard();
+  const refreshRotation = useRef(new Animated.Value(0)).current;
+
+  const refreshSpin = refreshRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   const onRefresh = useCallback(() => {
+    Animated.timing(refreshRotation, {
+      toValue: 1,
+      duration: 550,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start(() => {
+      refreshRotation.setValue(0);
+    });
     refetch();
-  }, [refetch]);
+  }, [refetch, refreshRotation]);
 
   const handleLogout = async () => {
     await logout();
@@ -79,12 +95,15 @@ export default function DashboardScreen() {
           </View>
           <TouchableOpacity
             onPress={onRefresh}
+            disabled={isRefetching}
             style={[styles.refreshBtn, { backgroundColor: colors.surfaceSecondary }]}
           >
-            <RefreshCw
-              size={18}
-              color={colors.textSecondary}
-            />
+            <Animated.View style={{ transform: [{ rotate: refreshSpin }] }}>
+              <RefreshCw
+                size={18}
+                color={colors.textSecondary}
+              />
+            </Animated.View>
           </TouchableOpacity>
         </View>
 

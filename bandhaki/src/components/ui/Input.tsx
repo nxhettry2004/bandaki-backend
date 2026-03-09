@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput as RNTextInput, TextInputProps, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, TextInput as RNTextInput, TextInputProps, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 
 interface InputProps extends TextInputProps {
@@ -7,9 +7,11 @@ interface InputProps extends TextInputProps {
   error?: string;
   containerStyle?: ViewStyle;
   required?: boolean;
+  rightIcon?: React.ReactNode;
+  onRightIconPress?: () => void;
 }
 
-export function Input({ label, error, containerStyle, required, style, ...props }: InputProps) {
+export function Input({ label, error, containerStyle, required, style, rightIcon, onRightIconPress, ...props }: InputProps) {
   const { colors } = useTheme();
 
   return (
@@ -20,19 +22,32 @@ export function Input({ label, error, containerStyle, required, style, ...props 
           {required && <Text style={{ color: colors.error }}> *</Text>}
         </Text>
       )}
-      <RNTextInput
+      <View
         style={[
-          styles.input,
+          styles.inputContainer,
           {
             backgroundColor: colors.surface,
             borderColor: error ? colors.error : colors.border,
-            color: colors.text,
           },
-          style,
         ]}
-        placeholderTextColor={colors.textTertiary}
-        {...props}
-      />
+      >
+        <RNTextInput
+          style={[
+            styles.input,
+            {
+              color: colors.text,
+            },
+            style,
+          ]}
+          placeholderTextColor={colors.textTertiary}
+          {...props}
+        />
+        {rightIcon ? (
+          <TouchableOpacity onPress={onRightIconPress} style={styles.rightIconBtn} activeOpacity={0.7}>
+            {rightIcon}
+          </TouchableOpacity>
+        ) : null}
+      </View>
       {error && (
         <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
       )}
@@ -46,12 +61,21 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 6,
   },
-  input: {
+  inputContainer: {
     borderWidth: 1,
     borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  input: {
+    flex: 1,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+  },
+  rightIconBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   error: {
     fontSize: 12,

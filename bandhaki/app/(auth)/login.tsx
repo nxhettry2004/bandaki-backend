@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
@@ -22,13 +21,14 @@ import { loginApi } from "../../src/api/endpoints";
 import { useTheme } from "../../src/hooks/useTheme";
 import { Input } from "../../src/components/ui/Input";
 import { Button } from "../../src/components/ui/Button";
-import { success } from "zod";
+import { Eye, EyeOff } from "lucide-react-native";
 
 export default function LoginScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     control,
@@ -71,11 +71,13 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={0}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {/* Logo / Brand */}
         <View style={styles.brandContainer}>
@@ -131,7 +133,15 @@ export default function LoginScreen() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.password?.message}
-                secureTextEntry
+                secureTextEntry={!showPassword}
+                rightIcon={
+                  showPassword ? (
+                    <EyeOff size={18} color={colors.textTertiary} />
+                  ) : (
+                    <Eye size={18} color={colors.textTertiary} />
+                  )
+                }
+                onRightIconPress={() => setShowPassword((prev) => !prev)}
                 required
               />
             )}

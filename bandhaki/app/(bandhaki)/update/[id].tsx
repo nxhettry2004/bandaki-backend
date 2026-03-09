@@ -110,6 +110,7 @@ export default function UpdateBandhakiScreen() {
       const result = await updateBandhaki(id!, {
         ...data,
         interestType: data.interestType as 'simple' | 'compound',
+        goldItems: [data.goldItems],
       });
       if (result.success) {
         Toast.show({ type: 'success', text1: 'Loan updated successfully!' });
