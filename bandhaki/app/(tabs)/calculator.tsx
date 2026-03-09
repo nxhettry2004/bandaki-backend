@@ -1,24 +1,18 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calculator as CalcIcon } from 'lucide-react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Calculator as CalcIcon } from "lucide-react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
-import { useTheme } from '../../src/hooks/useTheme';
-import { Input } from '../../src/components/ui/Input';
-import { Button } from '../../src/components/ui/Button';
-import { Card } from '../../src/components/ui/Card';
+import { useTheme } from "../../src/hooks/useTheme";
+import { Input } from "../../src/components/ui/Input";
+import { Button } from "../../src/components/ui/Button";
+import { Card } from "../../src/components/ui/Card";
 
 export default function CalculatorScreen() {
   const { colors } = useTheme();
-  const [principalAmount, setPrincipalAmount] = useState('');
-  const [interestRate, setInterestRate] = useState('2.5');
+  const [principalAmount, setPrincipalAmount] = useState("");
+  const [interestRate, setInterestRate] = useState("2.5");
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showResults, setShowResults] = useState(false);
@@ -44,13 +38,13 @@ export default function CalculatorScreen() {
     const rate = parseFloat(interestRate);
 
     if (!principalAmount || isNaN(principal) || principal <= 0) {
-      validationErrors.principal = 'Enter a valid principal amount';
+      validationErrors.principal = "Enter a valid principal amount";
     }
     if (!interestRate || isNaN(rate) || rate <= 0) {
-      validationErrors.rate = 'Enter a valid interest rate';
+      validationErrors.rate = "Enter a valid interest rate";
     }
     if (endDate <= startDate) {
-      validationErrors.dates = 'End date must be after start date';
+      validationErrors.dates = "End date must be after start date";
     }
 
     if (Object.keys(validationErrors).length > 0) {
@@ -80,16 +74,16 @@ export default function CalculatorScreen() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const clearCalculator = () => {
-    setPrincipalAmount('');
-    setInterestRate('2.5');
+    setPrincipalAmount("");
+    setInterestRate("2.5");
     setStartDate(new Date());
     setEndDate(new Date());
     setShowResults(false);
@@ -103,7 +97,9 @@ export default function CalculatorScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>
@@ -139,7 +135,9 @@ export default function CalculatorScreen() {
 
           {/* Start Date */}
           <View style={{ marginBottom: 16 }}>
-            <Text style={[styles.label, { color: colors.text }]}>Start Date *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Start Date *
+            </Text>
             <Button
               title={formatDate(startDate)}
               onPress={() => setShowStartPicker(true)}
@@ -150,9 +148,9 @@ export default function CalculatorScreen() {
               <DateTimePicker
                 value={startDate}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={(_, date) => {
-                  setShowStartPicker(Platform.OS === 'ios');
+                  setShowStartPicker(Platform.OS === "ios");
                   if (date) setStartDate(date);
                 }}
               />
@@ -161,7 +159,9 @@ export default function CalculatorScreen() {
 
           {/* End Date */}
           <View style={{ marginBottom: 16 }}>
-            <Text style={[styles.label, { color: colors.text }]}>End Date *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              End Date *
+            </Text>
             <Button
               title={formatDate(endDate)}
               onPress={() => setShowEndPicker(true)}
@@ -172,9 +172,9 @@ export default function CalculatorScreen() {
               <DateTimePicker
                 value={endDate}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={(_, date) => {
-                  setShowEndPicker(Platform.OS === 'ios');
+                  setShowEndPicker(Platform.OS === "ios");
                   if (date) setEndDate(date);
                 }}
               />
@@ -190,16 +190,16 @@ export default function CalculatorScreen() {
             <Button
               title="Calculate Interest"
               onPress={calculateInterest}
+              fullWidth
               size="lg"
               icon={<CalcIcon size={18} color="#FFF" />}
-              style={{ flex: 1 }}
             />
             <Button
               title="Clear"
               onPress={clearCalculator}
               variant="outline"
+              fullWidth
               size="lg"
-              style={{ flex: 1 }}
             />
           </View>
         </Card>
@@ -209,7 +209,9 @@ export default function CalculatorScreen() {
           <View style={styles.results}>
             <Card variant="info" style={styles.resultCard}>
               <View style={styles.resultRow}>
-                <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.resultLabel, { color: colors.textSecondary }]}
+                >
                   Time Period
                 </Text>
                 <Text style={[styles.resultValue, { color: colors.info }]}>
@@ -223,15 +225,28 @@ export default function CalculatorScreen() {
                 Simple Interest (Monthly)
               </Text>
               <View style={styles.resultRow}>
-                <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.resultLabel, { color: colors.textSecondary }]}
+                >
                   Interest Amount
                 </Text>
                 <Text style={[styles.resultValue, { color: colors.success }]}>
                   Rs. {simpleInterest.toFixed(2)}
                 </Text>
               </View>
-              <View style={[styles.resultRow, styles.resultRowBordered, { borderTopColor: colors.successBorder }]}>
-                <Text style={[styles.resultLabel, { color: colors.text, fontWeight: '500' }]}>
+              <View
+                style={[
+                  styles.resultRow,
+                  styles.resultRowBordered,
+                  { borderTopColor: colors.successBorder },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.resultLabel,
+                    { color: colors.text, fontWeight: "500" },
+                  ]}
+                >
                   Total Amount
                 </Text>
                 <Text style={[styles.resultValueLg, { color: colors.success }]}>
@@ -245,15 +260,28 @@ export default function CalculatorScreen() {
                 Compound Interest (Monthly)
               </Text>
               <View style={styles.resultRow}>
-                <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.resultLabel, { color: colors.textSecondary }]}
+                >
                   Interest Amount
                 </Text>
                 <Text style={[styles.resultValue, { color: colors.purple }]}>
                   Rs. {compoundInterest.toFixed(2)}
                 </Text>
               </View>
-              <View style={[styles.resultRow, styles.resultRowBordered, { borderTopColor: colors.purpleBorder }]}>
-                <Text style={[styles.resultLabel, { color: colors.text, fontWeight: '500' }]}>
+              <View
+                style={[
+                  styles.resultRow,
+                  styles.resultRowBordered,
+                  { borderTopColor: colors.purpleBorder },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.resultLabel,
+                    { color: colors.text, fontWeight: "500" },
+                  ]}
+                >
                   Total Amount
                 </Text>
                 <Text style={[styles.resultValueLg, { color: colors.purple }]}>
@@ -264,7 +292,9 @@ export default function CalculatorScreen() {
 
             <Card style={styles.resultCard}>
               <View style={styles.resultRow}>
-                <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.resultLabel, { color: colors.textSecondary }]}
+                >
                   Difference (Compound - Simple)
                 </Text>
                 <Text style={[styles.resultValue, { color: colors.primary }]}>
@@ -283,21 +313,21 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 32 },
   header: { marginBottom: 16 },
-  title: { fontSize: 24, fontWeight: '800' },
+  title: { fontSize: 24, fontWeight: "800" },
   subtitle: { fontSize: 13, marginTop: 2 },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
+  label: { fontSize: 14, fontWeight: "500", marginBottom: 6 },
   errorText: { fontSize: 12, marginTop: 4 },
   actionRow: {
-    flexDirection: 'row',
+    flexDirection: "column",
     gap: 10,
   },
   results: { marginTop: 16, gap: 12 },
   resultCard: { padding: 16 },
-  resultTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
+  resultTitle: { fontSize: 16, fontWeight: "600", marginBottom: 12 },
   resultRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   resultRowBordered: {
     marginTop: 12,
@@ -305,6 +335,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   resultLabel: { fontSize: 13 },
-  resultValue: { fontSize: 16, fontWeight: '700' },
-  resultValueLg: { fontSize: 18, fontWeight: '800' },
+  resultValue: { fontSize: 16, fontWeight: "700" },
+  resultValueLg: { fontSize: 18, fontWeight: "800" },
 });

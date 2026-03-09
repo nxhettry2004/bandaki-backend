@@ -5,6 +5,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
@@ -17,7 +18,6 @@ import {
   Wallet,
   ChevronRight,
   ChevronLeft,
-  Search,
 } from 'lucide-react-native';
 
 import { useLoans } from '../../src/hooks/useLoans';
@@ -25,7 +25,6 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { SearchBar } from '../../src/components/ui/SearchBar';
 import { StatusBadge } from '../../src/components/ui/StatusBadge';
 import { EmptyState } from '../../src/components/ui/EmptyState';
-import { Button } from '../../src/components/ui/Button';
 import type { LoanListEntry } from '../../src/types';
 
 export default function AllLoansScreen() {
@@ -50,11 +49,11 @@ export default function AllLoansScreen() {
   };
 
   const renderLoan = ({ item }: { item: LoanListEntry }) => (
-    <TouchableOpacity
-      style={[styles.loanCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      <Pressable
+        style={({ pressed }) => [styles.loanPressable, pressed && styles.loanPressed]}
       onPress={() => goToLoan(item._id)}
-      activeOpacity={0.7}
     >
+      <View style={[styles.loanCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
       {/* Top row: loan number + status */}
       <View style={styles.loanCardTop}>
         <View style={[styles.loanNumberBadge, { backgroundColor: colors.primaryLight }]}>
@@ -108,7 +107,8 @@ export default function AllLoansScreen() {
         </View>
         <ChevronRight size={16} color={colors.textTertiary} />
       </View>
-    </TouchableOpacity>
+    </View>
+    </Pressable>
   );
 
   return (
@@ -127,8 +127,10 @@ export default function AllLoansScreen() {
         <TouchableOpacity
           style={[styles.newBtn, { backgroundColor: colors.primary }]}
           onPress={() => router.push('/(bandhaki)/new')}
+          activeOpacity={0.8}
         >
           <Plus size={18} color="#fff" />
+          <Text style={styles.newBtnText}>New Loan</Text>
         </TouchableOpacity>
       </View>
 
@@ -207,18 +209,25 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700' },
   headerSubtitle: { fontSize: 12 },
   newBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
   },
+  newBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   loadingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listContent: { padding: 16, paddingBottom: 16 },
+  loanPressable: {},
+  loanPressed: {
+    opacity: 0.7,
+  },
   loanCard: {
-    borderRadius: 14,
     borderWidth: 1,
+    borderRadius: 14,
     padding: 14,
   },
   loanCardTop: {

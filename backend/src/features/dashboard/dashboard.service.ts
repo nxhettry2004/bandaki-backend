@@ -12,15 +12,22 @@ export class DashboardService {
       }),
       PaymentModel.find({ tenantId })
         .sort({ createdAt: -1 })
-        .limit(5)
-        .populate("bandhaki", "loanNumber")
+        .populate({
+          path: "bandhaki",
+          select: "loanNumber status",
+          match: { status: { $in: ["active", "defaulted"] } },
+        })
         .lean(),
     ]);
+
+    const filteredTransactions = recentTransactions
+      .filter((t: any) => t.bandhaki)
+      .slice(0, 5);
 
     return {
       totalCustomers,
       activeLoans,
-      recentTransactions: recentTransactions.map((t: any) => ({
+      recentTransactions: filteredTransactions.map((t: any) => ({
         _id: t._id.toString(),
         amount: t.amount,
         paymentDate: t.paymentDate,

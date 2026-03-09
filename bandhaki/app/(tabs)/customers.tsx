@@ -39,8 +39,7 @@ export default function CustomersTab() {
     ({ item }: { item: Customer }) => (
       <Pressable
         onPress={() => router.push(`/(customers)/${item._id}`)}
-        style={styles.customerPressable}
-        android_ripple={{ color: colors.surfaceSecondary }}
+        style={({ pressed }) => [styles.customerPressable, pressed && styles.customerPressed]}
       >
         <Card style={styles.customerCard}>
           <View style={styles.cardRow}>
@@ -154,8 +153,9 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 16, paddingBottom: 16 },
   customerPressable: {
     marginBottom: 8,
-    borderRadius: 16,
-    overflow: 'hidden',
+  },
+  customerPressed: {
+    opacity: 0.7,
   },
   customerCard: { marginBottom: 0 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

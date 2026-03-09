@@ -4,6 +4,7 @@ export interface JwtPayload {
   email: string;
   role: "tenant" | "superadmin";
   tenantId: string;
+  createdAt?: Date;
 }
 
 declare global {

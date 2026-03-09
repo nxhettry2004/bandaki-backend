@@ -74,6 +74,7 @@ export class AuthService {
       email: user.email,
       role: user.role || "tenant",
       tenantId: user._id.toString(),
+      createdAt: user.createdAt,
     };
   }
 
