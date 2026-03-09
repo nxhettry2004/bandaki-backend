@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
@@ -85,10 +86,13 @@ export default function LoginScreen() {
           <View
             style={[
               styles.logoCircle,
-              { backgroundColor: colors.primaryLight },
             ]}
           >
-            <Text style={[styles.logoText, { color: colors.primary }]}>B</Text>
+            <Image
+              source={require("../../assets/images/noBg.png")}
+              style={{ width: 126, height: 126 }}
+              resizeMode="contain"
+            />
           </View>
           <Text style={[styles.title, { color: colors.text }]}>Bandhaki</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>

@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 import { useColorScheme } from 'react-native';
 import { getToken } from '../src/api/axiosClient';
+import { useAppUpdates } from '../src/hooks/useAppUpdates';
 import 'react-native-reanimated';
 
 const queryClient = new QueryClient({
@@ -65,6 +66,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  useAppUpdates();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
