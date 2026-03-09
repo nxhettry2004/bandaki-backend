@@ -1,0 +1,401 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  Alert,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
+import { ArrowLeft, Camera, Plus, Trash2 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+
+import { BandhakiFormSchema, type BandhakiFormSchemaType } from '../../src/schema/FormSchema';
+import { createBandhaki } from '../../src/api/endpoints';
+import { useCustomers } from '../../src/hooks/useCustomers';
+import { useTheme } from '../../src/hooks/useTheme';
+import { Input } from '../../src/components/ui/Input';
+import { Button } from '../../src/components/ui/Button';
+import { Card } from '../../src/components/ui/Card';
+import { Select } from '../../src/components/ui/Select';
+import type { LoanImage } from '../../src/types';
+
+export default function NewBandhakiScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: customers = [] } = useCustomers();
+  const [loading, setLoading] = useState(false);
+  const [images, setImages] = useState<LoanImage[]>([]);
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<BandhakiFormSchemaType>({
+    resolver: zodResolver(BandhakiFormSchema),
+    defaultValues: {
+      customer: '',
+      loanDate: new Date().toISOString().split('T')[0],
+      principalAmount: 0,
+      interestRate: 2.5,
+      interestType: 'simple',
+      goldItems: { itemType: '', weight: undefined, notes: '' },
+      totalValuation: 0,
+      status: 'active',
+      paymentStatus: 'pending',
+      images: [],
+    },
+  });
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const loanDate = watch('loanDate');
+
+  const customerOptions = customers.map((c: any) => ({
+    label: `${c.name}${c.phone ? ` (${c.phone})` : ''}`,
+    value: c._id,
+  }));
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets) {
+      const newImages = result.assets.map((asset) => ({
+        name: asset.fileName || `image_${Date.now()}`,
+        url: asset.uri,
+      }));
+      setImages((prev) => [...prev, ...newImages]);
+      setValue('images', [...images, ...newImages]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const updated = images.filter((_, i) => i !== index);
+    setImages(updated);
+    setValue('images', updated);
+  };
+
+  const onSubmit = async (data: BandhakiFormSchemaType) => {
+    setLoading(true);
+    try {
+      const result = await createBandhaki({
+        ...data,
+        interestType: data.interestType as 'simple' | 'compound',
+        images,
+      });
+
+      if (result.success) {
+        Toast.show({ type: 'success', text1: 'Loan created successfully!' });
+        queryClient.invalidateQueries({ queryKey: ['loans'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboardData'] });
+        queryClient.invalidateQueries({ queryKey: ['activeLoans'] });
+        router.back();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: result.message || 'Failed to create loan',
+        });
+      }
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error?.response?.data?.message || 'Something went wrong',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <ArrowLeft size={22} color={colors.text} />
+        </TouchableOpacity>
+        <View>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>New Loan</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            Create a new bandhaki entry
+          </Text>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        {/* Customer Selection */}
+        <Controller
+          control={control}
+          name="customer"
+          render={({ field: { value, onChange } }) => (
+            <Select
+              label="Customer"
+              placeholder="Select a customer"
+              options={customerOptions}
+              value={value}
+              onValueChange={onChange}
+              error={errors.customer?.message}
+              required
+              searchable
+            />
+          )}
+        />
+
+        {/* Loan Date */}
+        <View style={{ marginBottom: 16 }}>
+          <Text style={[styles.label, { color: colors.text }]}>
+            Loan Date <Text style={{ color: colors.error }}>*</Text>
+          </Text>
+          <TouchableOpacity
+            style={[styles.dateBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={[styles.dateText, { color: colors.text }]}>{loanDate}</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <View>
+              {Platform.OS === 'web' ? (
+                <Input
+                  value={loanDate}
+                  onChangeText={(text) => setValue('loanDate', text)}
+                  placeholder="YYYY-MM-DD"
+                />
+              ) : (
+                (() => {
+                  const DateTimePicker = require('@react-native-community/datetimepicker').default;
+                  return (
+                    <DateTimePicker
+                      value={new Date(loanDate || Date.now())}
+                      mode="date"
+                      display="default"
+                      onChange={(_: any, date?: Date) => {
+                        setShowDatePicker(Platform.OS === 'ios');
+                        if (date) setValue('loanDate', date.toISOString().split('T')[0]);
+                      }}
+                    />
+                  );
+                })()
+              )}
+            </View>
+          )}
+          {errors.loanDate && (
+            <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
+              {errors.loanDate.message}
+            </Text>
+          )}
+        </View>
+
+        {/* Principal Amount */}
+        <Controller
+          control={control}
+          name="principalAmount"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label="Principal Amount (Rs.)"
+              placeholder="Enter amount"
+              value={value ? String(value) : ''}
+              onChangeText={(text) => onChange(parseFloat(text) || 0)}
+              keyboardType="numeric"
+              error={errors.principalAmount?.message}
+              required
+            />
+          )}
+        />
+
+        {/* Interest Rate */}
+        <Controller
+          control={control}
+          name="interestRate"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label="Interest Rate (% per month)"
+              placeholder="Enter rate"
+              value={value ? String(value) : ''}
+              onChangeText={(text) => onChange(parseFloat(text) || 0)}
+              keyboardType="decimal-pad"
+              error={errors.interestRate?.message}
+              required
+            />
+          )}
+        />
+
+        {/* Interest Type */}
+        <Controller
+          control={control}
+          name="interestType"
+          render={({ field: { value, onChange } }) => (
+            <Select
+              label="Interest Type"
+              options={[
+                { label: 'Simple Interest', value: 'simple' },
+                { label: 'Compound Interest', value: 'compound' },
+              ]}
+              value={value}
+              onValueChange={onChange}
+              error={errors.interestType?.message}
+              required
+            />
+          )}
+        />
+
+        {/* Gold Items */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Gold Items</Text>
+        <Card style={{ marginBottom: 16 }}>
+          <Controller
+            control={control}
+            name="goldItems.itemType"
+            render={({ field: { onChange, value } }) => (
+              <Input
+                label="Item Type"
+                placeholder="e.g., Gold Ring, Necklace"
+                value={value}
+                onChangeText={onChange}
+                error={errors.goldItems?.itemType?.message}
+                required
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="goldItems.weight"
+            render={({ field: { onChange, value } }) => (
+              <Input
+                label="Weight (grams)"
+                placeholder="Enter weight"
+                value={value ? String(value) : ''}
+                onChangeText={(text) => onChange(parseFloat(text) || undefined)}
+                keyboardType="decimal-pad"
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="goldItems.notes"
+            render={({ field: { onChange, value } }) => (
+              <Input
+                label="Notes"
+                placeholder="Additional info"
+                value={value || ''}
+                onChangeText={onChange}
+                multiline
+              />
+            )}
+          />
+        </Card>
+
+        {/* Total Valuation */}
+        <Controller
+          control={control}
+          name="totalValuation"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label="Total Valuation (Rs.)"
+              placeholder="Enter total valuation"
+              value={value ? String(value) : ''}
+              onChangeText={(text) => onChange(parseFloat(text) || 0)}
+              keyboardType="numeric"
+              error={errors.totalValuation?.message}
+            />
+          )}
+        />
+
+        {/* Images */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Loan Images</Text>
+        <View style={styles.imagesRow}>
+          {images.map((img, idx) => (
+            <View key={idx} style={[styles.imageThumb, { backgroundColor: colors.surfaceSecondary }]}>
+              <Text style={[styles.imageName, { color: colors.text }]} numberOfLines={1}>
+                {img.name}
+              </Text>
+              <TouchableOpacity onPress={() => removeImage(idx)}>
+                <Trash2 size={14} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={[styles.addImageBtn, { borderColor: colors.border }]}
+            onPress={pickImage}
+          >
+            <Camera size={20} color={colors.textTertiary} />
+            <Text style={[styles.addImageText, { color: colors.textTertiary }]}>Add</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Submit */}
+        <Button
+          title="Create Loan Entry"
+          onPress={handleSubmit(onSubmit)}
+          loading={loading}
+          fullWidth
+          size="lg"
+          style={{ marginTop: 24, marginBottom: 16 }}
+        />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  backBtn: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerSubtitle: { fontSize: 12 },
+  scrollContent: { padding: 16, paddingBottom: 40 },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
+  dateBtn: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dateText: { fontSize: 15 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12, marginTop: 8 },
+  imagesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  imageThumb: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 8,
+    borderRadius: 8,
+    maxWidth: '45%',
+  },
+  imageName: { fontSize: 11, flex: 1 },
+  addImageBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  addImageText: { fontSize: 10 },
+});
