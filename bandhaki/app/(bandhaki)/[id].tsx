@@ -10,6 +10,7 @@ import {
   RefreshControl,
   FlatList,
   Image,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -61,6 +62,8 @@ export default function LoanDetailScreen() {
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [deleting, setDeleting] = useState(false);
+  const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
+  const [previewImageIndex, setPreviewImageIndex] = useState(0);
 
   // Fetch loan detail
   const {
@@ -83,6 +86,29 @@ export default function LoanDetailScreen() {
   });
 
   const loan: DetailedLoanEntry | null = loanData?.entry || null;
+
+  const openImagePreview = (index: number) => {
+    setPreviewImageIndex(index);
+    setIsImagePreviewVisible(true);
+  };
+
+  const closeImagePreview = () => {
+    setIsImagePreviewVisible(false);
+  };
+
+  const showPreviousImage = () => {
+    if (!loan?.images?.length) return;
+    setPreviewImageIndex((current) =>
+      current === 0 ? loan.images.length - 1 : current - 1,
+    );
+  };
+
+  const showNextImage = () => {
+    if (!loan?.images?.length) return;
+    setPreviewImageIndex((current) =>
+      current === loan.images.length - 1 ? 0 : current + 1,
+    );
+  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -675,8 +701,10 @@ export default function LoanDetailScreen() {
             </View>
             <View style={styles.imageGrid}>
               {loan.images.map((img, index) => (
-                <View
+                <TouchableOpacity
                   key={index}
+                  onPress={() => openImagePreview(index)}
+                  activeOpacity={0.85}
                   style={[
                     styles.imageItem,
                     {
@@ -696,7 +724,7 @@ export default function LoanDetailScreen() {
                   >
                     📄 {img.name || `Image ${index + 1}`}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </Card>
@@ -779,6 +807,53 @@ export default function LoanDetailScreen() {
           </Card>
         )}
       </ScrollView>
+
+      {loan.images && loan.images.length > 0 && (
+        <Modal
+          visible={isImagePreviewVisible}
+          animationType="fade"
+          transparent
+          onRequestClose={closeImagePreview}
+        >
+          <View style={styles.previewOverlay}>
+            <TouchableOpacity
+              style={styles.previewCloseButton}
+              onPress={closeImagePreview}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.previewButtonText}>✕ Close</Text>
+            </TouchableOpacity>
+
+            <View style={styles.previewImageContainer}>
+              <Image
+                source={{ uri: loan.images[previewImageIndex]?.url }}
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            </View>
+
+            <View style={styles.previewFooter}>
+              <TouchableOpacity
+                onPress={showPreviousImage}
+                style={styles.previewNavButton}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.previewButtonText}>← Previous</Text>
+              </TouchableOpacity>
+              <Text style={styles.previewCounterText}>
+                {previewImageIndex + 1} / {loan.images.length}
+              </Text>
+              <TouchableOpacity
+                onPress={showNextImage}
+                style={styles.previewNavButton}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.previewButtonText}>Next →</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -953,6 +1028,53 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   imageItemText: { fontSize: 13 },
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.92)",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 24,
+  },
+  previewCloseButton: {
+    alignSelf: "flex-end",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  previewImageContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  previewFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 10,
+  },
+  previewNavButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  previewButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  previewCounterText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
   actions: { gap: 10, marginBottom: 16 },
   paymentRow: {
     flexDirection: "row",
