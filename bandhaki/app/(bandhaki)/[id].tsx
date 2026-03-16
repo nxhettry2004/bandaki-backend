@@ -97,16 +97,18 @@ export default function LoanDetailScreen() {
   };
 
   const showPreviousImage = () => {
-    if (!loan?.images?.length) return;
+    const imagesLength = loan?.images?.length ?? 0;
+    if (!imagesLength) return;
     setPreviewImageIndex((current) =>
-      current === 0 ? loan.images.length - 1 : current - 1,
+      current === 0 ? imagesLength - 1 : current - 1,
     );
   };
 
   const showNextImage = () => {
-    if (!loan?.images?.length) return;
+    const imagesLength = loan?.images?.length ?? 0;
+    if (!imagesLength) return;
     setPreviewImageIndex((current) =>
-      current === loan.images.length - 1 ? 0 : current + 1,
+      current === imagesLength - 1 ? 0 : current + 1,
     );
   };
 
@@ -510,14 +512,14 @@ export default function LoanDetailScreen() {
         </Card>
 
         {/* Gold Items / Collateral */}
-        {((loan.goldItems && loan.goldItems.length > 0) ||
-          (loan.totalValuation && loan.totalValuation > 0)) && (
+        {((loan.goldItems?.length ?? 0) > 0 ||
+          (loan.totalValuation ?? 0) > 0) && (
           <Card style={{ marginBottom: 12 }}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               🏆 Collateral Details
             </Text>
 
-            {loan.totalValuation && loan.totalValuation > 0 && (
+            {(loan.totalValuation ?? 0) > 0 && (
               <View
                 style={[
                   styles.valuationCard,
@@ -546,6 +548,15 @@ export default function LoanDetailScreen() {
                   </View>
                 </View>
                 <View style={{ alignItems: "flex-end" }}>
+                  {(() => {
+                    const totalValuation = loan.totalValuation ?? 0;
+                    const ltvRatio =
+                      totalValuation > 0
+                        ? ((loan.principalAmount / totalValuation) * 100).toFixed(1)
+                        : "0";
+
+                    return (
+                      <>
                   <Text style={{ fontSize: 11, color: "#D97706" }}>
                     LTV Ratio
                   </Text>
@@ -556,14 +567,12 @@ export default function LoanDetailScreen() {
                       color: "#92400E",
                     }}
                   >
-                    {loan.totalValuation > 0
-                      ? (
-                          (loan.principalAmount / loan.totalValuation) *
-                          100
-                        ).toFixed(1)
-                      : 0}
+                    {ltvRatio}
                     %
                   </Text>
+                      </>
+                    );
+                  })()}
                 </View>
               </View>
             )}
@@ -619,7 +628,7 @@ export default function LoanDetailScreen() {
                         )}
                       </View>
                     </View>
-                    {item.weight && item.weight > 0 && (
+                    {(item.weight ?? 0) > 0 && (
                       <View style={{ alignItems: "flex-end" }}>
                         <Text
                           style={[styles.goldWeight, { color: colors.text }]}
@@ -635,7 +644,7 @@ export default function LoanDetailScreen() {
                     )}
                   </View>
                 ))}
-                {loan.goldItems.some((i) => i.weight && i.weight > 0) && (
+                {loan.goldItems.some((i) => (i.weight ?? 0) > 0) && (
                   <View
                     style={[
                       styles.totalWeightRow,
