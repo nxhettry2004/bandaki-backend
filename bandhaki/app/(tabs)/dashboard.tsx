@@ -247,8 +247,10 @@ export default function DashboardScreen() {
         dashboardData.recentTransactions.length > 0 ? (
           dashboardData.recentTransactions.map((loan: any, index: number) => (
             <TouchableOpacity
-              key={loan._id || index}
-              onPress={() => router.push(`/(bandhaki)/${loan._id}`)}
+              key={loan._id || `${loan.loanId || "loan"}-${index}`}
+              onPress={() =>
+                loan.loanId ? router.push(`/(bandhaki)/${loan.loanId}`) : undefined
+              }
               activeOpacity={0.7}
             >
               <Card style={styles.recentCard}>

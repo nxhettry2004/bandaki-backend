@@ -32,7 +32,8 @@ export class DashboardService {
       totalCustomers,
       activeLoans,
       recentTransactions: filteredTransactions.map((t: any) => ({
-        _id: t.bandhaki?._id?.toString() || t._id.toString(),
+        _id: t._id.toString(),
+        loanId: t.bandhaki?._id?.toString(),
         amount: t.amount,
         paymentDate: t.paymentDate,
         paymentMethod: t.paymentMethod,

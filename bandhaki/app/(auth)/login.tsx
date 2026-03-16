@@ -19,6 +19,7 @@ import {
   type LoginFormSchemaType,
 } from "../../src/schema/FormSchema";
 import { loginApi } from "../../src/api/endpoints";
+import { API_URL } from "../../src/api/axiosClient";
 import { useTheme } from "../../src/hooks/useTheme";
 import { Input } from "../../src/components/ui/Input";
 import { Button } from "../../src/components/ui/Button";
@@ -59,10 +60,14 @@ export default function LoginScreen() {
         });
       }
     } catch (error: any) {
+      const isNetworkError = !error?.response;
+
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: error?.response?.data?.message || "Something went wrong",
+        text2: isNetworkError
+          ? `Cannot reach server at ${API_URL}`
+          : error?.response?.data?.message || "Something went wrong",
       });
     } finally {
       setLoading(false);

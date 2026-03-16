@@ -10,8 +10,34 @@ import dashboardRoutes from "./features/dashboard/dashboard.routes";
 
 const app = express();
 
-const ipOriginRegex = /^https?:\/\/(10\.|127\.|172\.(1[6-9]|2\d|3[0-1])\.|192\.168\.)\d{1,3}\.\d{1,3}(:\d+)?$/;
-const localhostOriginRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+function isPrivateIpv4(hostname: string): boolean {
+  const parts = hostname.split(".").map(Number);
+
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part) || part < 0 || part > 255)) {
+    return false;
+  }
+
+  return (
+    parts[0] === 10 ||
+    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+    (parts[0] === 192 && parts[1] === 168) ||
+    hostname === "127.0.0.1"
+  );
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const parsedOrigin = new URL(origin);
+
+    if (!["http:", "https:", "exp:"].includes(parsedOrigin.protocol)) {
+      return false;
+    }
+
+    return parsedOrigin.hostname === "localhost" || isPrivateIpv4(parsedOrigin.hostname);
+  } catch {
+    return false;
+  }
+}
 
 // Global middleware
 app.use(
@@ -22,7 +48,7 @@ app.use(
         return;
       }
 
-      if (localhostOriginRegex.test(origin) || ipOriginRegex.test(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
         return;
       }
