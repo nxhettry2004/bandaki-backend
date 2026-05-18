@@ -1,9 +1,9 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import BACKEND_URL from '../../config/backendConfig';
 
-const DEFAULT_API_URL = 'http://192.168.1.88:5000';
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+export const API_URL = BACKEND_URL;
 
 const TOKEN_KEY = 'bandhaki_auth_token';
 

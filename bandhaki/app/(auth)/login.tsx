@@ -104,10 +104,10 @@ export default function LoginScreen() {
         {/* Login Form */}
         <View style={[styles.formCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.formTitle, { color: colors.text }]}>
-            Sign In
+            Sign In 
           </Text>
           <Text style={[styles.formSubtitle, { color: colors.textSecondary }]}>
-            Enter your credentials to continue
+            Enter your account credentials to continue
           </Text>
 
           <Controller
