@@ -3,6 +3,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useColorScheme } from 'react-native';
 import { getToken } from '../src/api/axiosClient';
@@ -69,25 +71,29 @@ export default function RootLayout() {
   useAppUpdates();
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <AuthGate>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="(bandhaki)" options={{ headerShown: false }} />
-            <Stack.Screen name="(customers)" options={{ headerShown: false }} />
-            <Stack.Screen name="(payments)" options={{ headerShown: false }} />
-          </Stack>
-        </AuthGate>
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <Toast />
-      </QueryClientProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <BottomSheetModalProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthGate>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                }}
+              >
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="(bandhaki)" options={{ headerShown: false }} />
+                <Stack.Screen name="(customers)" options={{ headerShown: false }} />
+                <Stack.Screen name="(payments)" options={{ headerShown: false }} />
+              </Stack>
+            </AuthGate>
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+            <Toast />
+          </QueryClientProvider>
+        </BottomSheetModalProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
