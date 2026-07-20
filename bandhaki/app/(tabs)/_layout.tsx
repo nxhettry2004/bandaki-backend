@@ -19,6 +19,7 @@ import {
   Wallet,
   Landmark,
 } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../src/constants/colors";
 
 function FABPopup({
@@ -27,12 +28,14 @@ function FABPopup({
   onPayment,
   onBandhaki,
   onClose,
+  popupBottom,
 }: {
   visible: boolean;
   colors: (typeof Colors)["light"];
   onPayment: () => void;
   onBandhaki: () => void;
   onClose: () => void;
+  popupBottom: number;
 }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(10)).current;
@@ -81,6 +84,9 @@ function FABPopup({
           {
             opacity,
             transform: [{ translateY }],
+            bottom: popupBottom,
+            left: '50%' ,
+            marginLeft: -110,
           },
         ]}
       >
@@ -149,6 +155,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [fabOpen, setFabOpen] = useState(false);
 
   const handlePayment = () => {
@@ -160,6 +167,9 @@ export default function TabLayout() {
     setFabOpen(false);
     router.push("/(bandhaki)/new");
   };
+
+  const tabBarHeight = 56 + insets.bottom;
+  const fabBottom = tabBarHeight / 2;
 
   return (
     <View style={{ flex: 1 }}>
@@ -173,8 +183,8 @@ export default function TabLayout() {
             borderTopColor: colors.border,
             borderTopWidth: 1,
             paddingTop: 4,
-            paddingBottom: Platform.OS === "ios" ? 24 : 8,
-            height: Platform.OS === "ios" ? 84 : 64,
+            paddingBottom: insets.bottom,
+            height: 56 + insets.bottom,
           },
           tabBarLabelStyle: {
             fontSize: 11,
@@ -245,11 +255,12 @@ export default function TabLayout() {
         onPayment={handlePayment}
         onBandhaki={handleBandhaki}
         onClose={() => setFabOpen(false)}
+        popupBottom={fabBottom + 66}
       />
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: "#D97706" }]}
+        style={[styles.fab, { backgroundColor: "#D97706", bottom: fabBottom, left: '50%', marginLeft: -28 }]}
         onPress={() => setFabOpen((p) => !p)}
         activeOpacity={0.85}
       >
@@ -262,8 +273,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   fab: {
     position: "absolute",
-    bottom: Platform.OS === "ios" ? 42 : 25,
-    alignSelf: "center",
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -278,9 +287,8 @@ const styles = StyleSheet.create({
   },
   popupContainer: {
     position: "absolute",
-    bottom: Platform.OS === "ios" ? 108 : 90,
-    alignSelf: "center",
     alignItems: "center",
+    width: 220,
     zIndex: 99,
   },
   popupCard: {
