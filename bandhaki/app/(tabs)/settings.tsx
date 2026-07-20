@@ -56,7 +56,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.pageTitle, { color: colors.text }]}>Settings</Text>
         <Text style={[styles.pageSubtitle, { color: colors.textSecondary }]}>

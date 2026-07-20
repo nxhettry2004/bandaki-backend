@@ -98,6 +98,7 @@ export default function CalculatorScreen() {
 
   return (
     <SafeAreaView
+      edges={['top']}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>

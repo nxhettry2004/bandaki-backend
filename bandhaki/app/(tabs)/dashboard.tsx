@@ -70,6 +70,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView
+      edges={['top']}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView

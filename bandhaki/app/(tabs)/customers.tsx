@@ -94,6 +94,7 @@ export default function CustomersTab() {
 
   return (
     <SafeAreaView
+      edges={['top']}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <View style={styles.header}>

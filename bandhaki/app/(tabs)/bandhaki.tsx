@@ -114,6 +114,7 @@ export default function BandhakiTab() {
 
   return (
     <SafeAreaView
+      edges={['top']}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       {/* Header */}
