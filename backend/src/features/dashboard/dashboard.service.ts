@@ -12,10 +12,10 @@ export class DashboardService {
       }),
       PaymentModel.find({ tenantId })
         .sort({ createdAt: -1 })
+        .limit(10)
         .populate({
           path: "bandhaki",
           select: "loanNumber status principalAmount customer",
-          match: { status: { $in: ["active", "defaulted"] } },
           populate: {
             path: "customer",
             select: "name phone",
