@@ -99,12 +99,6 @@ export default function CustomerLoansScreen() {
         <View style={styles.loadingCenter}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      ) : loans.length === 0 ? (
-        <EmptyState
-          //   icon={AlertTriangle}
-          title="No Bandhaki Loans Found"
-          description="This customer has no loans yet"
-        />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -116,112 +110,121 @@ export default function CustomerLoansScreen() {
             />
           }
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Bandhaki Items
-          </Text>
+          {loans.length === 0 ? (
+            <EmptyState
+              title="No Bandhaki Loans Found"
+              description="This customer has no loans yet"
+            />
+          ) : (
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Bandhaki Items
+              </Text>
 
-          {loans.map((loan) => (
-            <TouchableOpacity
-              key={loan._id}
-              style={[
-                styles.loanCard,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-              onPress={() => goToLoan(loan._id)}
-              activeOpacity={0.7}
-            >
-              {/* Top: Loan # + Status */}
-              <View style={styles.loanTop}>
-                <View
+              {loans.map((loan) => (
+                <TouchableOpacity
+                  key={loan._id}
                   style={[
-                    styles.loanNumBadge,
-                    { backgroundColor: colors.primaryLight },
+                    styles.loanCard,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
                   ]}
+                  onPress={() => goToLoan(loan._id)}
+                  activeOpacity={0.7}
                 >
-                  <Text style={[styles.loanNumText, { color: colors.primary }]}>
-                    #{loan.loanNumber}
-                  </Text>
-                </View>
-                <StatusBadge status={loan.status} />
-              </View>
+                  {/* Top: Loan # + Status */}
+                  <View style={styles.loanTop}>
+                    <View
+                      style={[
+                        styles.loanNumBadge,
+                        { backgroundColor: colors.primaryLight },
+                      ]}
+                    >
+                      <Text style={[styles.loanNumText, { color: colors.primary }]}>
+                        #{loan.loanNumber}
+                      </Text>
+                    </View>
+                    <StatusBadge status={loan.status} />
+                  </View>
 
-              {/* Amount Grid */}
-              <View style={styles.amountRow}>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={[styles.amountLabel, { color: colors.textTertiary }]}
-                  >
-                    Principal
-                  </Text>
-                  <Text style={[styles.amountVal, { color: "#1D4ED8" }]}>
-                    {formatAmount(loan.principalAmount)}
-                  </Text>
-                </View>
-                <View style={{ flex: 1, alignItems: "flex-end" }}>
-                  <Text
-                    style={[styles.amountLabel, { color: colors.textTertiary }]}
-                  >
-                    Outstanding
-                  </Text>
-                  <Text style={[styles.amountVal, { color: "#DC2626" }]}>
-                    {formatAmount(loan.outstandingPrincipal)}
-                  </Text>
-                </View>
-              </View>
+                  {/* Amount Grid */}
+                  <View style={styles.amountRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[styles.amountLabel, { color: colors.textTertiary }]}
+                      >
+                        Principal
+                      </Text>
+                      <Text style={[styles.amountVal, { color: "#1D4ED8" }]}>
+                        {formatAmount(loan.principalAmount)}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: "flex-end" }}>
+                      <Text
+                        style={[styles.amountLabel, { color: colors.textTertiary }]}
+                      >
+                        Outstanding
+                      </Text>
+                      <Text style={[styles.amountVal, { color: "#DC2626" }]}>
+                        {formatAmount(loan.outstandingPrincipal)}
+                      </Text>
+                    </View>
+                  </View>
 
-              <View style={styles.amountRow}>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={[styles.amountLabel, { color: colors.textTertiary }]}
-                  >
-                    Interest Due
-                  </Text>
-                  <Text style={[styles.amountVal, { color: "#EA580C" }]}>
-                    {formatAmount(
-                      loan.calculatedInterest + (loan.outstandingInterest || 0),
-                    )}
-                  </Text>
-                </View>
-                <View style={{ flex: 1, alignItems: "flex-end" }}>
-                  <Text
-                    style={[styles.amountLabel, { color: colors.textTertiary }]}
-                  >
-                    Total Due
-                  </Text>
-                  <Text style={[styles.amountVal, { color: "#D97706" }]}>
-                    {formatAmount(loan.totalDue)}
-                  </Text>
-                </View>
-              </View>
+                  <View style={styles.amountRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[styles.amountLabel, { color: colors.textTertiary }]}
+                      >
+                        Interest Due
+                      </Text>
+                      <Text style={[styles.amountVal, { color: "#EA580C" }]}>
+                        {formatAmount(
+                          loan.calculatedInterest + (loan.outstandingInterest || 0),
+                        )}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: "flex-end" }}>
+                      <Text
+                        style={[styles.amountLabel, { color: colors.textTertiary }]}
+                      >
+                        Total Due
+                      </Text>
+                      <Text style={[styles.amountVal, { color: "#D97706" }]}>
+                        {formatAmount(loan.totalDue)}
+                      </Text>
+                    </View>
+                  </View>
 
-              {/* Bottom: Date + Rate */}
-              <View
-                style={[styles.loanBottom, { borderTopColor: colors.border }]}
-              >
-                <View style={styles.metaRow}>
-                  <Calendar size={13} color={colors.textTertiary} />
-                  <Text
-                    style={[styles.metaText, { color: colors.textTertiary }]}
+                  {/* Bottom: Date + Rate */}
+                  <View
+                    style={[styles.loanBottom, { borderTopColor: colors.border }]}
                   >
-                    {new Date(loan.loanDate).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "2-digit",
-                    })}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.metaText,
-                      { color: colors.textTertiary, marginLeft: 8 },
-                    ]}
-                  >
-                    {loan.interestRate}% • {loan.interestType}
-                  </Text>
-                </View>
-                <ChevronRight size={16} color={colors.textTertiary} />
-              </View>
-            </TouchableOpacity>
-          ))}
+                    <View style={styles.metaRow}>
+                      <Calendar size={13} color={colors.textTertiary} />
+                      <Text
+                        style={[styles.metaText, { color: colors.textTertiary }]}
+                      >
+                        {new Date(loan.loanDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "2-digit",
+                        })}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.metaText,
+                          { color: colors.textTertiary, marginLeft: 8 },
+                        ]}
+                      >
+                        {loan.interestRate}% • {loan.interestType}
+                      </Text>
+                    </View>
+                    <ChevronRight size={16} color={colors.textTertiary} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>

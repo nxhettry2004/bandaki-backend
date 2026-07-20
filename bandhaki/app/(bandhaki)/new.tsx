@@ -104,6 +104,7 @@ export default function NewBandhakiScreen() {
         queryClient.invalidateQueries({ queryKey: ['loans'] });
         queryClient.invalidateQueries({ queryKey: ['dashboardData'] });
         queryClient.invalidateQueries({ queryKey: ['activeLoans'] });
+        queryClient.invalidateQueries({ queryKey: ['customerLoans'] });
         router.back();
       } else {
         Toast.show({
