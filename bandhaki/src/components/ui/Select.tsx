@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  Modal,
-  FlatList,
   StyleSheet,
   TextInput,
 } from 'react-native';
 import { ChevronDown, Search, Check } from 'lucide-react-native';
+import { BottomSheetModal, BottomSheetBackdrop, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { useTheme } from '../../hooks/useTheme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SelectOption {
   label: string;
@@ -38,7 +38,7 @@ export function Select({
   searchable = false,
 }: SelectProps) {
   const { colors } = useTheme();
-  const [visible, setVisible] = useState(false);
+  const bottomSheetModalRef = useRef<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const selectedOption = options.find((o) => o.value === value);
@@ -49,8 +49,67 @@ export function Select({
       )
     : options;
 
+  const handlePresent = useCallback(() => {
+    bottomSheetModalRef.current?.present();
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    setSearchQuery('');
+  }, []);
+
+  const handleSelect = useCallback(
+    (itemValue: string) => {
+      onValueChange(itemValue);
+      bottomSheetModalRef.current?.dismiss();
+    },
+    [onValueChange]
+  );
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        pressBehavior="close"
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+      />
+    ),
+    []
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: SelectOption }) => (
+      <TouchableOpacity
+        style={[
+          styles.option,
+          {
+            backgroundColor:
+              item.value === value ? colors.primaryLight : 'transparent',
+          },
+        ]}
+        onPress={() => handleSelect(item.value)}
+      >
+        <Text
+          style={[
+            styles.optionText,
+            {
+              color: item.value === value ? colors.primary : colors.text,
+              fontWeight: item.value === value ? '600' : '400',
+            },
+          ]}
+        >
+          {item.label}
+        </Text>
+        {item.value === value && <Check size={18} color={colors.primary} />}
+      </TouchableOpacity>
+    ),
+    [value, colors, handleSelect]
+  );
+
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View>
       {label && (
         <Text style={[styles.label, { color: colors.text }]}>
           {label}
@@ -65,7 +124,7 @@ export function Select({
             borderColor: error ? colors.error : colors.border,
           },
         ]}
-        onPress={() => setVisible(true)}
+        onPress={handlePresent}
         activeOpacity={0.7}
       >
         <Text
@@ -86,96 +145,64 @@ export function Select({
         <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
       )}
 
-      <Modal
-        visible={visible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setVisible(false)}
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        index={1}
+        snapPoints={['60%' , '90%']}
+        onDismiss={handleDismiss}
+        backdropComponent={renderBackdrop}
+        handleIndicatorStyle={{
+          backgroundColor: colors.border,
+          width: 36,
+          height: 4,
+          borderRadius: 2,
+        }}
+        backgroundStyle={{
+          backgroundColor: colors.surface,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+        }}
       >
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setVisible(false)}
-        >
-          <View
-            style={[styles.modalContent, { backgroundColor: colors.surface }]}
-          >
-            <View style={[styles.handle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              {label || 'Select'}
-            </Text>
+        <View style={[styles.sheetContent , {marginBottom:insets.bottom}]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>
+            {label || 'Select'}
+          </Text>
 
-            {searchable && (
-              <View
-                style={[
-                  styles.searchContainer,
-                  {
-                    backgroundColor: colors.surfaceSecondary,
-                    borderColor: colors.border,
-                  },
-                ]}
+          {searchable && (
+            <View
+              style={[
+                styles.searchContainer,
+                {
+                  backgroundColor: colors.surfaceSecondary,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Search size={16} color={colors.textTertiary} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.text }]}
+                placeholder="Search..."
+                placeholderTextColor={colors.textTertiary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+          )}
+
+          <BottomSheetFlatList
+            data={filteredOptions}
+            keyExtractor={(item: SelectOption) => item.value}
+            renderItem={renderItem}
+            ListEmptyComponent={
+              <Text
+                style={[styles.emptyText, { color: colors.textTertiary }]}
               >
-                <Search size={16} color={colors.textTertiary} />
-                <TextInput
-                  style={[styles.searchInput, { color: colors.text }]}
-                  placeholder="Search..."
-                  placeholderTextColor={colors.textTertiary}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoFocus
-                />
-              </View>
-            )}
-
-            <FlatList
-              data={filteredOptions}
-              keyExtractor={(item) => item.value}
-              style={{ maxHeight: 350 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.option,
-                    {
-                      backgroundColor:
-                        item.value === value
-                          ? colors.primaryLight
-                          : 'transparent',
-                    },
-                  ]}
-                  onPress={() => {
-                    onValueChange(item.value);
-                    setVisible(false);
-                    setSearchQuery('');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      {
-                        color:
-                          item.value === value ? colors.primary : colors.text,
-                        fontWeight: item.value === value ? '600' : '400',
-                      },
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                  {item.value === value && (
-                    <Check size={18} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              )}
-              ListEmptyComponent={
-                <Text
-                  style={[styles.emptyText, { color: colors.textTertiary }]}
-                >
-                  No options found
-                </Text>
-              }
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+                No options found
+              </Text>
+            }
+          />
+        </View>
+      </BottomSheetModal>
     </View>
   );
 }
@@ -203,24 +230,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  overlay: {
+  sheetContent: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 40,
-    maxHeight: '70%',
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 17,
