@@ -1,9 +1,9 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import BACKEND_URL from '../../config/backendConfig';
+import DEFAULT_URL from '../../config/backendConfig';
 
-export const API_URL = BACKEND_URL;
+export let API_URL = DEFAULT_URL;
 
 const TOKEN_KEY = 'bandhaki_auth_token';
 
@@ -54,9 +54,12 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor — attach Bearer token
+// Request interceptor — attach Bearer token and ensure correct baseURL
 apiClient.interceptors.request.use(
   async (config) => {
+    const storedUrl = await SecureStore.getItemAsync('API_ENDPOINT');
+    config.baseURL = storedUrl || DEFAULT_URL;
+    API_URL = config.baseURL;
     const token = await getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

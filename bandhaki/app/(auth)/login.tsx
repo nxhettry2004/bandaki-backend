@@ -7,6 +7,8 @@ import {
   Platform,
   ScrollView,
   Image,
+  TouchableHighlight,
+  TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
@@ -23,9 +25,11 @@ import { API_URL } from "../../src/api/axiosClient";
 import { useTheme } from "../../src/hooks/useTheme";
 import { Input } from "../../src/components/ui/Input";
 import { Button } from "../../src/components/ui/Button";
-import { Eye, EyeOff } from "lucide-react-native";
+import { Eye, EyeOff, Settings } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets()
   const { colors } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -166,6 +170,10 @@ export default function LoginScreen() {
         <Text style={[styles.footer, { color: colors.textTertiary }]}>
           Version 1.0.0 • Bandhaki Gold Ledger
         </Text>
+
+        <TouchableOpacity onPress={() => router.navigate("/(auth)/setting")} style={{position:'absolute' , top:insets.top *1.5, right:20 , padding:10 }}>
+            <Settings size={24} color={'black'}/>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -174,6 +182,11 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  settingBtn:{
+    position:'absolute',
+    top:0,
+    right:0
   },
   scrollContent: {
     flexGrow: 1,
