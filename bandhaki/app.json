@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Bandhaki",
+    "name": "Log Book",
     "slug": "bandhaki",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,7 +14,7 @@
       "fallbackToCacheTimeout": 0
     },
     "icon": "./assets/images/icon.png",
-    "scheme": "bandhaki",
+    "scheme": "logbook",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -29,7 +29,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.ankitkhanal2.bandhaki"
+      "package": "com.ankitkhanal2.logbook"
     },
     "web": {
       "output": "static",
