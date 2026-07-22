@@ -16,6 +16,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
+import * as ImagePicker from "expo-image-picker";
+import type { ImagePickerAsset } from "expo-image-picker";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -28,18 +30,32 @@ import {
   Trash2,
   Image as ImageIcon,
   CreditCard,
+  Printer,
+  Plus,
 } from "lucide-react-native";
 
 import {
   getBandhakiById,
   getPaymentsByBandhaki,
   deleteBandhaki,
+  addImageToLoan,
+  deleteImageFromLoan,
 } from "../../src/api/endpoints";
+import { uploadImageToCloudinary } from "../../src/api/cloudinary";
 import { useTheme } from "../../src/hooks/useTheme";
+import { useAuth } from "../../src/hooks/useAuth";
 import { Card } from "../../src/components/ui/Card";
 import { Button } from "../../src/components/ui/Button";
 import { StatusBadge } from "../../src/components/ui/StatusBadge";
 import type { DetailedLoanEntry, Payment } from "../../src/types";
+import {
+  generateLoanAgreementHtml,
+  generatePaymentReceiptHtml,
+  type PaperSize,
+} from "../../src/utils/receiptTemplates";
+import { printReceipt, shareReceiptAsPdf } from "../../src/utils/printReceipt";
+
+type PrintTarget = { type: "agreement" } | { type: "payment"; payment: Payment };
 
 function formatAmount(value?: number) {
   if (value === null || value === undefined) return "—";
@@ -61,9 +77,15 @@ export default function LoanDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
   const [previewImageIndex, setPreviewImageIndex] = useState(0);
+  const [printingAgreement, setPrintingAgreement] = useState(false);
+  const [printingPaymentId, setPrintingPaymentId] = useState<string | null>(null);
+  const [printTarget, setPrintTarget] = useState<PrintTarget | null>(null);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
 
   // Fetch loan detail
   const {
@@ -110,6 +132,127 @@ export default function LoanDetailScreen() {
     setPreviewImageIndex((current) =>
       current === imagesLength - 1 ? 0 : current + 1,
     );
+  };
+
+  const handlePrintAgreement = () => {
+    if (!loan) return;
+    setPrintTarget({ type: "agreement" });
+  };
+
+  const handlePrintPayment = (payment: Payment) => {
+    if (!loan) return;
+    setPrintTarget({ type: "payment", payment });
+  };
+
+  const closePrintOptions = () => setPrintTarget(null);
+
+  const handlePrintOption = async (mode: "print" | "share", paperSize: PaperSize) => {
+    if (!loan || !printTarget) return;
+    const target = printTarget;
+    closePrintOptions();
+
+    const isAgreement = target.type === "agreement";
+    const html = isAgreement
+      ? generateLoanAgreementHtml(loan, user?.username, paperSize)
+      : generatePaymentReceiptHtml(loan, target.payment, user?.username, paperSize);
+
+    if (isAgreement) setPrintingAgreement(true);
+    else setPrintingPaymentId(target.payment._id);
+
+    try {
+      if (mode === "print") {
+        await printReceipt(html, paperSize);
+      } else {
+        await shareReceiptAsPdf(html, paperSize);
+      }
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: mode === "print" ? "Print failed" : "Share failed",
+        text2: err?.message,
+      });
+    } finally {
+      if (isAgreement) setPrintingAgreement(false);
+      else setPrintingPaymentId(null);
+    }
+  };
+
+  const uploadAndAttachImages = async (assets: ImagePickerAsset[]) => {
+    if (!loan) return;
+    setUploadingImages(true);
+    try {
+      for (const asset of assets) {
+        const uploaded = await uploadImageToCloudinary(asset);
+        const result = await addImageToLoan(loan._id, uploaded);
+        if (!result.success) throw new Error(result.message);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["loan", id] });
+      Toast.show({ type: "success", text1: "Photo(s) added" });
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Upload failed",
+        text2: err?.message || "Could not upload one or more images.",
+      });
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const pickImagesFromGallery = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    await uploadAndAttachImages(result.assets);
+  };
+
+  const captureImageFromCamera = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Toast.show({ type: "error", text1: "Camera permission required" });
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (result.canceled || !result.assets?.length) return;
+    await uploadAndAttachImages(result.assets);
+  };
+
+  const handleAddImagesPress = () => {
+    Alert.alert("Add Photos", "Choose a source", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Take Photo", onPress: captureImageFromCamera },
+      { text: "Choose from Gallery", onPress: pickImagesFromGallery },
+    ]);
+  };
+
+  const handleDeleteImage = (imageId?: string) => {
+    if (!loan || !imageId) return;
+    Alert.alert("Delete Image", "Are you sure you want to delete this image?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          setDeletingImageId(imageId);
+          try {
+            const result = await deleteImageFromLoan(loan._id, imageId);
+            if (result.success) {
+              await queryClient.invalidateQueries({ queryKey: ["loan", id] });
+              Toast.show({ type: "success", text1: "Image deleted" });
+            } else {
+              Toast.show({ type: "error", text1: "Delete failed", text2: result.message });
+            }
+          } catch (err: any) {
+            Toast.show({ type: "error", text1: "Delete failed", text2: err?.message });
+          } finally {
+            setDeletingImageId(null);
+          }
+        },
+      },
+    ]);
   };
 
   const handleDelete = () => {
@@ -219,6 +362,20 @@ export default function LoanDetailScreen() {
           Loan Details
         </Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={handlePrintAgreement}
+            disabled={printingAgreement}
+            style={[
+              styles.iconBtn,
+              { backgroundColor: colors.surfaceSecondary },
+            ]}
+          >
+            {printingAgreement ? (
+              <ActivityIndicator size="small" color={colors.text} />
+            ) : (
+              <Printer size={16} color={colors.text} />
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push(`/(bandhaki)/update/${id}`)}
             style={[
@@ -688,16 +845,16 @@ export default function LoanDetailScreen() {
         </Card>
 
         {/* Loan Images */}
-        {loan.images && loan.images.length > 0 && (
-          <Card style={{ marginBottom: 12 }}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 12,
-              }}
-            >
+        <Card style={{ marginBottom: 12 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <ImageIcon size={16} color={colors.text} />
               <Text
                 style={[
@@ -705,15 +862,32 @@ export default function LoanDetailScreen() {
                   { color: colors.text, marginBottom: 0 },
                 ]}
               >
-                Loan Images ({loan.images.length})
+                Loan Images ({loan.images?.length || 0})
               </Text>
             </View>
+            <TouchableOpacity
+              onPress={handleAddImagesPress}
+              disabled={uploadingImages}
+              style={[styles.addImageBtn, { backgroundColor: colors.primaryLight }]}
+            >
+              {uploadingImages ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <>
+                  <Plus size={14} color={colors.primary} />
+                  <Text style={[styles.addImageBtnText, { color: colors.primary }]}>
+                    Add
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {loan.images && loan.images.length > 0 ? (
             <View style={styles.imageGrid}>
               {loan.images.map((img, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => openImagePreview(index)}
-                  activeOpacity={0.85}
+                <View
+                  key={img._id || index}
                   style={[
                     styles.imageItem,
                     {
@@ -722,22 +896,42 @@ export default function LoanDetailScreen() {
                     },
                   ]}
                 >
-                  <Image
-                    source={{ uri: img.url }}
-                    style={styles.imagePreview}
-                    resizeMode="cover"
-                  />
-                  <Text
-                    style={[styles.imageItemText, { color: colors.text }]}
-                    numberOfLines={1}
+                  <TouchableOpacity
+                    onPress={() => openImagePreview(index)}
+                    activeOpacity={0.85}
                   >
-                    📄 {img.name || `Image ${index + 1}`}
-                  </Text>
-                </TouchableOpacity>
+                    <Image
+                      source={{ uri: img.url }}
+                      style={styles.imagePreview}
+                      resizeMode="cover"
+                    />
+                    <Text
+                      style={[styles.imageItemText, { color: colors.text }]}
+                      numberOfLines={1}
+                    >
+                      📄 {img.name || `Image ${index + 1}`}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteImage(img._id)}
+                    disabled={deletingImageId === img._id}
+                    style={[styles.imageRemoveBtn, { backgroundColor: "#FEE2E2" }]}
+                  >
+                    {deletingImageId === img._id ? (
+                      <ActivityIndicator size="small" color={colors.error} />
+                    ) : (
+                      <Trash2 size={14} color={colors.error} />
+                    )}
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
-          </Card>
-        )}
+          ) : (
+            <Text style={{ fontSize: 13, color: colors.textTertiary }}>
+              No images added yet. Tap &quot;Add&quot; to attach photos.
+            </Text>
+          )}
+        </Card>
 
         {/* Action Buttons */}
         <View style={styles.actions}>
@@ -808,9 +1002,22 @@ export default function LoanDetailScreen() {
                     </Text>
                   )}
                 </View>
-                <Text style={[styles.paymentAmount, { color: colors.success }]}>
-                  {formatAmount(payment.amount)}
-                </Text>
+                <View style={{ alignItems: "flex-end", gap: 6 }}>
+                  <Text style={[styles.paymentAmount, { color: colors.success }]}>
+                    {formatAmount(payment.amount)}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handlePrintPayment(payment)}
+                    disabled={printingPaymentId === payment._id}
+                    style={[styles.iconBtn, { backgroundColor: colors.surfaceSecondary, width: 30, height: 30 }]}
+                  >
+                    {printingPaymentId === payment._id ? (
+                      <ActivityIndicator size="small" color={colors.text} />
+                    ) : (
+                      <Printer size={14} color={colors.text} />
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </Card>
@@ -863,6 +1070,57 @@ export default function LoanDetailScreen() {
           </View>
         </Modal>
       )}
+
+      <Modal
+        visible={!!printTarget}
+        animationType="fade"
+        transparent
+        onRequestClose={closePrintOptions}
+      >
+        <TouchableOpacity
+          style={styles.printModalOverlay}
+          activeOpacity={1}
+          onPress={closePrintOptions}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.printModalCard, { backgroundColor: colors.surface }]}
+          >
+            <Text style={[styles.printModalTitle, { color: colors.text }]}>
+              {printTarget?.type === "agreement" ? "Loan Agreement" : "Payment Receipt"}
+            </Text>
+            <Text style={[styles.printModalSubtitle, { color: colors.textTertiary }]}>
+              Choose a paper size and export option
+            </Text>
+
+            {(
+              [
+                ["print", "a5", "Print · A5"],
+                ["print", "thermal", "Print · Thermal (POS)"],
+                ["share", "a5", "Share as PDF · A5"],
+                ["share", "thermal", "Share as PDF · Thermal"],
+              ] as [("print" | "share"), PaperSize, string][]
+            ).map(([mode, paperSize, label]) => (
+              <TouchableOpacity
+                key={`${mode}-${paperSize}`}
+                style={[styles.printModalOption, { borderColor: colors.border }]}
+                onPress={() => handlePrintOption(mode, paperSize)}
+              >
+                <Printer size={16} color={colors.text} />
+                <Text style={[styles.printModalOptionText, { color: colors.text }]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity onPress={closePrintOptions} style={{ marginTop: 4 }}>
+              <Text style={[styles.printModalCancel, { color: colors.textTertiary }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1024,6 +1282,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 6,
     width: "48%",
+    position: "relative",
   },
   imageGrid: {
     flexDirection: "row",
@@ -1096,4 +1355,53 @@ const styles = StyleSheet.create({
   paymentMeta: { fontSize: 11, marginTop: 3, lineHeight: 16 },
   paymentNotes: { fontSize: 11, marginTop: 3, fontStyle: "italic" },
   paymentAmount: { fontSize: 15, fontWeight: "700" },
+  addImageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  addImageBtnText: { fontSize: 12, fontWeight: "600" },
+  imageRemoveBtn: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  printModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  printModalCard: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 32,
+  },
+  printModalTitle: { fontSize: 17, fontWeight: "700", marginBottom: 4 },
+  printModalSubtitle: { fontSize: 13, marginBottom: 16 },
+  printModalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  printModalOptionText: { fontSize: 15, fontWeight: "600" },
+  printModalCancel: {
+    textAlign: "center",
+    fontSize: 15,
+    fontWeight: "600",
+    paddingVertical: 8,
+  },
 });

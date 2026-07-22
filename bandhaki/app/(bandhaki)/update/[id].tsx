@@ -23,6 +23,7 @@ import { Input } from '../../../src/components/ui/Input';
 import { Button } from '../../../src/components/ui/Button';
 import { Card } from '../../../src/components/ui/Card';
 import { Select } from '../../../src/components/ui/Select';
+import { QuickAddCustomerModal } from '../../../src/components/QuickAddCustomerModal';
 
 export default function UpdateBandhakiScreen() {
   const { colors } = useTheme();
@@ -30,6 +31,7 @@ export default function UpdateBandhakiScreen() {
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   // Fetch existing loan data
   const {
@@ -187,6 +189,8 @@ export default function UpdateBandhakiScreen() {
               error={errors.customer?.message}
               required
               searchable
+              addNewLabel="Add New"
+              onAddNew={() => setQuickAddVisible(true)}
             />
           )}
         />
@@ -377,6 +381,16 @@ export default function UpdateBandhakiScreen() {
           style={{ marginTop: 24, marginBottom: 16 }}
         />
       </ScrollView>
+
+      <QuickAddCustomerModal
+        visible={quickAddVisible}
+        onClose={() => setQuickAddVisible(false)}
+        onCreated={(customer) => {
+          setQuickAddVisible(false);
+          queryClient.invalidateQueries({ queryKey: ['customers'] });
+          setValue('customer', customer._id);
+        }}
+      />
     </SafeAreaView>
   );
 }

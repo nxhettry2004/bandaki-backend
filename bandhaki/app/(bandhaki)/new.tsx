@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,15 +18,18 @@ import { useQueryClient } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 import { ArrowLeft, Camera, Trash2 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import type { ImagePickerAsset } from 'expo-image-picker';
 
 import { BandhakiFormSchema, type BandhakiFormSchemaType } from '../../src/schema/FormSchema';
 import { createBandhaki } from '../../src/api/endpoints';
+import { uploadImageToCloudinary } from '../../src/api/cloudinary';
 import { useCustomers } from '../../src/hooks/useCustomers';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
 import { Card } from '../../src/components/ui/Card';
 import { Select } from '../../src/components/ui/Select';
+import { QuickAddCustomerModal } from '../../src/components/QuickAddCustomerModal';
 import type { LoanImage } from '../../src/types';
 
 export default function NewBandhakiScreen() {
@@ -35,6 +39,8 @@ export default function NewBandhakiScreen() {
   const { data: customers = [] } = useCustomers();
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<LoanImage[]>([]);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   const {
     control,
@@ -66,21 +72,56 @@ export default function NewBandhakiScreen() {
     value: c._id,
   }));
 
-  const pickImage = async () => {
+  const uploadAssets = async (assets: ImagePickerAsset[]) => {
+    setUploadingCount(assets.length);
+    try {
+      const uploaded = await Promise.all(
+        assets.map((asset) => uploadImageToCloudinary(asset))
+      );
+      setImages((prev) => {
+        const next = [...prev, ...uploaded];
+        setValue('images', next);
+        return next;
+      });
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Upload failed',
+        text2: 'Could not upload one or more images. Please try again.',
+      });
+    } finally {
+      setUploadingCount(0);
+    }
+  };
+
+  const pickImageFromGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets) {
-      const newImages = result.assets.map((asset) => ({
-        name: asset.fileName || `image_${Date.now()}`,
-        url: asset.uri,
-      }));
-      setImages((prev) => [...prev, ...newImages]);
-      setValue('images', [...images, ...newImages]);
+    if (result.canceled || !result.assets?.length) return;
+    await uploadAssets(result.assets);
+  };
+
+  const captureImageFromCamera = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Toast.show({ type: 'error', text1: 'Camera permission required' });
+      return;
     }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (result.canceled || !result.assets?.length) return;
+    await uploadAssets(result.assets);
+  };
+
+  const handleUploadPress = () => {
+    Alert.alert('Add Photos', 'Choose a source', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Take Photo', onPress: captureImageFromCamera },
+      { text: 'Choose from Gallery', onPress: pickImageFromGallery },
+    ]);
   };
 
   const removeImage = (index: number) => {
@@ -154,6 +195,8 @@ export default function NewBandhakiScreen() {
               error={errors.customer?.message}
               required
               searchable
+              addNewLabel="Add New"
+              onAddNew={() => setQuickAddVisible(true)}
             />
           )}
         />
@@ -321,15 +364,28 @@ export default function NewBandhakiScreen() {
 
         {/* Upload area */}
         <TouchableOpacity
-          style={[styles.uploadArea, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }]}
-          onPress={pickImage}
+          style={[
+            styles.uploadArea,
+            { borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
+            uploadingCount > 0 && { opacity: 0.6 },
+          ]}
+          onPress={handleUploadPress}
           activeOpacity={0.7}
+          disabled={uploadingCount > 0}
         >
-          <View style={[styles.uploadIconBg, { backgroundColor: colors.primaryLight }]}>
-            <Camera size={28} color={colors.primary} />
-          </View>
+          {uploadingCount > 0 ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginBottom: 12 }} />
+          ) : (
+            <View style={[styles.uploadIconBg, { backgroundColor: colors.primaryLight }]}>
+              <Camera size={28} color={colors.primary} />
+            </View>
+          )}
           <Text style={[styles.uploadTitle, { color: colors.text }]}>
-            {images.length > 0 ? 'Add More Photos' : 'Upload Photos'}
+            {uploadingCount > 0
+              ? `Uploading ${uploadingCount} photo${uploadingCount > 1 ? 's' : ''}...`
+              : images.length > 0
+                ? 'Add More Photos'
+                : 'Upload Photos'}
           </Text>
           <Text style={[styles.uploadSub, { color: colors.textTertiary }]}>
             Tap to select images of gold items
@@ -358,11 +414,22 @@ export default function NewBandhakiScreen() {
           title="Create Loan Entry"
           onPress={handleSubmit(onSubmit)}
           loading={loading}
+          disabled={uploadingCount > 0}
           fullWidth
           size="lg"
           style={{ marginTop: 24, marginBottom: 16, borderRadius: 6 }}
         />
       </ScrollView>
+
+      <QuickAddCustomerModal
+        visible={quickAddVisible}
+        onClose={() => setQuickAddVisible(false)}
+        onCreated={(customer) => {
+          setQuickAddVisible(false);
+          queryClient.invalidateQueries({ queryKey: ['customers'] });
+          setValue('customer', customer._id);
+        }}
+      />
     </SafeAreaView>
   );
 }
