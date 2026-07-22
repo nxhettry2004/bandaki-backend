@@ -6,7 +6,7 @@ import {
   StyleSheet,
   TextInput,
 } from 'react-native';
-import { ChevronDown, Search, Check } from 'lucide-react-native';
+import { ChevronDown, Search, Check, Plus } from 'lucide-react-native';
 import { BottomSheetModal, BottomSheetBackdrop, BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { useTheme } from '../../hooks/useTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,8 @@ interface SelectProps {
   error?: string;
   required?: boolean;
   searchable?: boolean;
+  addNewLabel?: string;
+  onAddNew?: () => void;
 }
 
 export function Select({
@@ -36,6 +38,8 @@ export function Select({
   error,
   required,
   searchable = false,
+  addNewLabel,
+  onAddNew,
 }: SelectProps) {
   const { colors } = useTheme();
   const bottomSheetModalRef = useRef<any>(null);
@@ -56,6 +60,11 @@ export function Select({
   const handleDismiss = useCallback(() => {
     setSearchQuery('');
   }, []);
+
+  const handleAddNew = useCallback(() => {
+    bottomSheetModalRef.current?.dismiss();
+    onAddNew?.();
+  }, [onAddNew]);
 
   const handleSelect = useCallback(
     (itemValue: string) => {
@@ -164,9 +173,22 @@ export function Select({
         }}
       >
         <View style={[styles.sheetContent , {marginBottom:insets.bottom}]}>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>
-            {label || 'Select'}
-          </Text>
+          <View style={styles.modalTitleRow}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {label || 'Select'}
+            </Text>
+            {onAddNew && (
+              <TouchableOpacity
+                onPress={handleAddNew}
+                style={[styles.addNewBtn, { backgroundColor: colors.primaryLight }]}
+              >
+                <Plus size={14} color={colors.primary} />
+                <Text style={[styles.addNewBtnText, { color: colors.primary }]}>
+                  {addNewLabel || 'Add New'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {searchable && (
             <View
@@ -235,10 +257,27 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     flex: 1,
   },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   modalTitle: {
     fontSize: 17,
     fontWeight: '600',
-    marginBottom: 16,
+  },
+  addNewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  addNewBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',
