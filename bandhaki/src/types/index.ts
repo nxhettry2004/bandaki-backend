@@ -62,6 +62,7 @@ export interface GoldItem {
 // ==================== Loan Image ====================
 
 export interface LoanImage {
+  _id?: string;
   name: string;
   url: string;
 }

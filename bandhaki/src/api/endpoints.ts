@@ -13,6 +13,7 @@ import type {
   BandhakiFormData,
   DetailedLoanEntry,
   LoanListEntry,
+  LoanImage,
   Payment,
   PaymentFormData,
   ApiResponse,
@@ -81,7 +82,7 @@ export async function getCustomerById(id: string): Promise<Customer> {
   return res.data?.data;
 }
 
-export async function createCustomer(data: CustomerFormData): Promise<ApiResponse> {
+export async function createCustomer(data: CustomerFormData): Promise<ApiResponse<Customer>> {
   const res = await apiClient.post('/api/customers', data);
   return res.data;
 }
@@ -133,11 +134,13 @@ export async function deleteBandhaki(id: string): Promise<ApiResponse> {
   return res.data;
 }
 
-export async function addImageToLoan(
-  loanId: string,
-  imageData: { url: string; filename: string; size: number; type: string }
-): Promise<ApiResponse> {
-  const res = await apiClient.post(`/api/bandhaki/${loanId}/images`, imageData);
+export async function addImageToLoan(loanId: string, image: LoanImage): Promise<ApiResponse> {
+  const res = await apiClient.post(`/api/bandhaki/${loanId}/images`, image);
+  return res.data;
+}
+
+export async function deleteImageFromLoan(loanId: string, imageId: string): Promise<ApiResponse> {
+  const res = await apiClient.delete(`/api/bandhaki/${loanId}/images/${imageId}`);
   return res.data;
 }
 
