@@ -72,6 +72,15 @@ export class BandhakiController {
     }
   }
 
+  async deleteImage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await bandhakiService.deleteImage(req.params.id as string, req.user!.tenantId, req.params.imageId as string);
+      sendSuccess(res, null, "Image deleted successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await bandhakiService.delete(req.params.id as string, req.user!.tenantId);

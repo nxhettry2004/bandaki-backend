@@ -260,6 +260,14 @@ export class BandhakiService {
     return updated;
   }
 
+  async deleteImage(id: string, tenantId: string, imageId: string) {
+    const updated = await this.bandhakiRepo.deleteImage(id, tenantId, imageId);
+    if (!updated) {
+      throw ApiError.notFound("Loan not found");
+    }
+    return updated;
+  }
+
   async delete(id: string, tenantId: string): Promise<void> {
     const result = await this.bandhakiRepo.delete(id, tenantId);
     if (!result) {

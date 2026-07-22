@@ -124,6 +124,14 @@ export class BandhakiRepository {
     ).lean() as unknown as IBandhaki | null;
   }
 
+  async deleteImage(id: string, tenantId: string, imageId: string): Promise<IBandhaki | null> {
+    return BandhakiModel.findOneAndUpdate(
+      { _id: id, tenantId },
+      { $pull: { images: { _id: imageId } } },
+      { new: true }
+    ).lean() as unknown as IBandhaki | null;
+  }
+
   async delete(id: string, tenantId: string): Promise<IBandhaki | null> {
     return BandhakiModel.findOneAndDelete({ _id: id, tenantId }).lean() as unknown as IBandhaki | null;
   }

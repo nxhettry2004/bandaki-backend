@@ -16,6 +16,7 @@ router.get("/customer/:customerId", controller.getByCustomer);
 router.get("/:id", controller.getById);
 router.put("/:id", validate(UpdateBandhakiSchema), controller.update);
 router.post("/:id/images", validate(AddImageSchema), controller.addImage);
+router.delete("/:id/images/:imageId", controller.deleteImage);
 router.delete("/:id", controller.delete);
 
 export default router;
