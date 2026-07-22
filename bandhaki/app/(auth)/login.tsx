@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,12 @@ import {
   TouchableHighlight,
   TouchableOpacity,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
+import * as SecureStore from "expo-secure-store";
 
 import {
   LoginFormSchema,
@@ -28,6 +29,9 @@ import { Button } from "../../src/components/ui/Button";
 import { Eye, EyeOff, Settings } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+const OTP_ATTEMPTS_KEY = "otp_failed_attempts";
+const MAX_ATTEMPTS = 3;
+
 export default function LoginScreen() {
   const insets = useSafeAreaInsets()
   const { colors } = useTheme();
@@ -35,6 +39,7 @@ export default function LoginScreen() {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [settingsDisabled, setSettingsDisabled] = useState(false);
 
   const {
     control,
@@ -47,6 +52,34 @@ export default function LoginScreen() {
       password: "",
     },
   });
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkSettingsAccess();
+    }, [])
+  );
+
+  const checkSettingsAccess = async () => {
+    try {
+      const attempts = await SecureStore.getItemAsync(OTP_ATTEMPTS_KEY);
+      const attemptCount = parseInt(attempts || "0", 10);
+      setSettingsDisabled(attemptCount >= MAX_ATTEMPTS);
+    } catch (error) {
+      console.error("Error checking settings access:", error);
+    }
+  };
+
+  const handleSettingsPress = () => {
+    if (settingsDisabled) {
+      Toast.show({
+        type: "error",
+        text1: "Settings Locked",
+        text2: "Maximum OTP attempts exceeded",
+      });
+      return;
+    }
+    router.navigate("/(auth)/setting");
+  };
 
   const onSubmit = async (data: LoginFormSchemaType) => {
     setLoading(true);
@@ -171,8 +204,12 @@ export default function LoginScreen() {
           Version 1.0.0 • Log Book Gold Ledger
         </Text>
 
-        <TouchableOpacity onPress={() => router.navigate("/(auth)/setting")} style={{position:'absolute' , top:insets.top *1.5, right:20 , padding:10 }}>
-            <Settings size={24} color={'black'}/>
+        <TouchableOpacity
+          onPress={handleSettingsPress}
+          disabled={settingsDisabled}
+          style={{position:'absolute' , top:insets.top *1.5, right:20 , padding:10, opacity: settingsDisabled ? 0.4 : 1 }}
+        >
+            <Settings size={24} color={settingsDisabled ? '#999' : 'black'}/>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
