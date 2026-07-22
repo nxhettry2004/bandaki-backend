@@ -1,4 +1,4 @@
-const DEFAULT_URL = 'http://192.168.1.115:5000';
+const DEFAULT_URL = 'http://192.168.1.105:5000';
 
 export default DEFAULT_URL;
 
