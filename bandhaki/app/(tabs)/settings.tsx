@@ -171,7 +171,7 @@ export default function SettingsScreen() {
         </Card>
 
         <Text style={[styles.versionText, { color: colors.textTertiary }]}>
-          Bandhaki Gold Ledger • Version 1.0.0
+          Log Book Gold Ledger • Version 1.0.0
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -134,7 +134,7 @@ export default function NewBandhakiScreen() {
         <View>
           <Text style={[styles.headerTitle, { color: colors.text }]}>New Loan</Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            Create a new bandhaki entry
+            Create a new log book entry
           </Text>
         </View>
       </View>

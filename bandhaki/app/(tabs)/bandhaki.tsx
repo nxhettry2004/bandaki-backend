@@ -120,7 +120,7 @@ export default function BandhakiTab() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.titleLight}>Bandhaki</Text>
+          <Text style={styles.titleLight}>Log Book</Text>
           <Text style={styles.subtitleLight}>
             {allCustomers.length} customers with active loans
           </Text>

@@ -300,7 +300,7 @@ export default function DashboardScreen() {
         {/* Logout */}
         <View style={styles.logoutSection}>
           <Button
-            title="Sign Out of Bandhaki"
+            title="Sign Out of Log Book"
             onPress={handleLogout}
             variant="danger"
             fullWidth
@@ -309,7 +309,7 @@ export default function DashboardScreen() {
             }
           />
           <Text style={[styles.versionText, { color: colors.textTertiary }]}>
-            Version 1.0.0 • Bandhaki Gold Ledger
+            Version 1.0.0 • Log Book Gold Ledger
           </Text>
         </View>
       </ScrollView>

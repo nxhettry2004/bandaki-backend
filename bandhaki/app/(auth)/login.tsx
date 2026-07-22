@@ -99,7 +99,7 @@ export default function LoginScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text style={[styles.title, { color: colors.text }]}>Bandhaki</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Log Book</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Gold Loan Ledger Management
           </Text>
@@ -168,7 +168,7 @@ export default function LoginScreen() {
         </View>
 
         <Text style={[styles.footer, { color: colors.textTertiary }]}>
-          Version 1.0.0 • Bandhaki Gold Ledger
+          Version 1.0.0 • Log Book Gold Ledger
         </Text>
 
         <TouchableOpacity onPress={() => router.navigate("/(auth)/setting")} style={{position:'absolute' , top:insets.top *1.5, right:20 , padding:10 }}>

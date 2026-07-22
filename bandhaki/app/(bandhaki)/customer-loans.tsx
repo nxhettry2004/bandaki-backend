@@ -79,7 +79,7 @@ export default function CustomerLoansScreen() {
               <Wallet size={16} color="rgba(255,255,255,0.8)" />
               <Text style={styles.bannerLabel}>LOAN PORTFOLIO</Text>
             </View>
-            <Text style={styles.bannerTitle}>Customer Bandhaki</Text>
+            <Text style={styles.bannerTitle}>Customer Log Book</Text>
             <View style={styles.customerChip}>
               <User size={14} color="rgba(255,255,255,0.8)" />
               <Text style={styles.customerChipText}>{name || "Unknown"}</Text>

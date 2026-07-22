@@ -131,7 +131,7 @@ function FABPopup({
             </View>
             <View>
               <Text style={[styles.popupLabel, { color: colors.text }]}>
-                Bandhaki
+                Log Book
               </Text>
               <Text style={[styles.popupSub, { color: colors.textTertiary }]}>
                 Create a new loan
