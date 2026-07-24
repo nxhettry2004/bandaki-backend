@@ -13,31 +13,36 @@ function getLanUrls(port: number): string[] {
     .map((network) => `http://${network.address}:${port}`);
 }
 
-async function main() {
-  // Validate required environment variables
-  validateEnv();
+// Validate required environment variables as soon as the module loads, so a
+// misconfigured deployment fails fast on both serverless and local.
+validateEnv();
 
-  // Connect to MongoDB
-  await connectDB();
+// On Vercel the Express app is invoked as a serverless handler — there is no
+// long-running process, so we must NOT call app.listen(). We connect to Mongo
+// per request (see middleware in app.ts) and just export the app.
+if (!process.env.VERCEL) {
+  // Local / traditional server: eagerly connect and start listening.
+  connectDB()
+    .then(() => {
+      app.listen(env.PORT, "0.0.0.0", () => {
+        const lanUrls = getLanUrls(env.PORT);
 
-  // Start server
-  app.listen(env.PORT, "0.0.0.0", () => {
-    const lanUrls = getLanUrls(env.PORT);
+        console.log(`🚀 Bandhaki API server running on port ${env.PORT}`);
+        console.log(`   Environment: ${env.NODE_ENV}`);
+        console.log(`   Health: http://localhost:${env.PORT}/api/health`);
 
-    console.log(`🚀 Bandhaki API server running on port ${env.PORT}`);
-    console.log(`   Environment: ${env.NODE_ENV}`);
-    console.log(`   Health: http://localhost:${env.PORT}/api/health`);
-
-    if (lanUrls.length > 0) {
-      console.log("   LAN URLs:");
-      lanUrls.forEach((url) => {
-        console.log(`   - ${url}/api/health`);
+        if (lanUrls.length > 0) {
+          console.log("   LAN URLs:");
+          lanUrls.forEach((url) => {
+            console.log(`   - ${url}/api/health`);
+          });
+        }
       });
-    }
-  });
+    })
+    .catch((error) => {
+      console.error("❌ Failed to start server:", error);
+      process.exit(1);
+    });
 }
 
-main().catch((error) => {
-  console.error("❌ Failed to start server:", error);
-  process.exit(1);
-});
+export default app;

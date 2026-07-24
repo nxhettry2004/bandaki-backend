@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 
-import { errorHandler } from "./middleware/error.middleware";  
+import { connectDB } from "./config/database";
+import { errorHandler } from "./middleware/error.middleware";
 import authRoutes from "./features/auth/auth.routes";
 import customerRoutes from "./features/customer/customer.routes";
 import bandhakiRoutes from "./features/bandhaki/bandhaki.routes";
@@ -59,6 +60,13 @@ app.use(
 );
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// Ensure a live MongoDB connection before any route runs. On serverless
+// (Vercel) each invocation may be a cold instance, so we connect (or reuse
+// the cached connection) per request instead of only once at boot.
+app.use((req, res, next) => {
+  connectDB().then(() => next()).catch(next);
+});
 
 // Health check
 app.get("/api/health", (_req, res) => {
