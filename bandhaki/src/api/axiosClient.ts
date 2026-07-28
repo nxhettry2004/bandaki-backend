@@ -6,21 +6,30 @@ import DEFAULT_URL from '../../config/backendConfig';
 export let API_URL = DEFAULT_URL;
 
 const TOKEN_KEY = 'bandhaki_auth_token';
+const ENDPOINT_KEY = 'API_ENDPOINT';
+
+// SecureStore hits the native keystore, which is slow. Both values change rarely,
+// so they are read once and kept in memory instead of on every request.
+let cachedToken: string | null | undefined;
+let cachedEndpoint: string | null | undefined;
 
 // ==================== Token Management ====================
 
 export async function getToken(): Promise<string | null> {
+  if (cachedToken !== undefined) return cachedToken;
   try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem(TOKEN_KEY);
-    }
-    return await SecureStore.getItemAsync(TOKEN_KEY);
+    cachedToken =
+      Platform.OS === 'web'
+        ? localStorage.getItem(TOKEN_KEY)
+        : await SecureStore.getItemAsync(TOKEN_KEY);
   } catch {
-    return null;
+    cachedToken = null;
   }
+  return cachedToken;
 }
 
 export async function setToken(token: string): Promise<void> {
+  cachedToken = token;
   try {
     if (Platform.OS === 'web') {
       localStorage.setItem(TOKEN_KEY, token);
@@ -33,6 +42,7 @@ export async function setToken(token: string): Promise<void> {
 }
 
 export async function removeToken(): Promise<void> {
+  cachedToken = null;
   try {
     if (Platform.OS === 'web') {
       localStorage.removeItem(TOKEN_KEY);
@@ -41,6 +51,37 @@ export async function removeToken(): Promise<void> {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
   } catch (error) {
     console.error('Failed to remove token:', error);
+  }
+}
+
+// ==================== API endpoint ====================
+
+export async function getApiEndpoint(): Promise<string> {
+  if (cachedEndpoint === undefined) {
+    try {
+      cachedEndpoint =
+        Platform.OS === 'web'
+          ? localStorage.getItem(ENDPOINT_KEY)
+          : await SecureStore.getItemAsync(ENDPOINT_KEY);
+    } catch {
+      cachedEndpoint = null;
+    }
+  }
+  return cachedEndpoint || DEFAULT_URL;
+}
+
+export async function setApiEndpoint(url: string): Promise<void> {
+  const normalized = url.trim().replace(/\/+$/, '');
+  cachedEndpoint = normalized;
+  API_URL = normalized;
+  try {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(ENDPOINT_KEY, normalized);
+      return;
+    }
+    await SecureStore.setItemAsync(ENDPOINT_KEY, normalized);
+  } catch (error) {
+    console.error('Failed to save API endpoint:', error);
   }
 }
 
@@ -57,9 +98,10 @@ const apiClient = axios.create({
 // Request interceptor — attach Bearer token and ensure correct baseURL
 apiClient.interceptors.request.use(
   async (config) => {
-    const storedUrl = await SecureStore.getItemAsync('API_ENDPOINT');
-    config.baseURL = storedUrl || DEFAULT_URL;
-    API_URL = config.baseURL;
+    const endpoint = await getApiEndpoint();
+    config.baseURL = endpoint;
+    API_URL = endpoint;
+
     const token = await getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

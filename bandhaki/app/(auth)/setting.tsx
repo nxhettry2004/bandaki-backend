@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
+import { getApiEndpoint, setApiEndpoint } from '../../src/api/axiosClient';
 
 const OTP_CODE = "5733";
 const MAX_ATTEMPTS = 3;
@@ -25,6 +26,7 @@ const Setting = () => {
 
   useEffect(() => {
     checkFailedAttempts();
+    getApiEndpoint().then(setEndpoint).catch(() => {});
   }, []);
 
   const checkFailedAttempts = async () => {
@@ -202,7 +204,7 @@ const Setting = () => {
 
               <Button
                 onPress={async () => {
-                  await SecureStore.setItem("API_ENDPOINT", endpoint)
+                  await setApiEndpoint(endpoint)
                   router.navigate("/(auth)/login")
                 }}
                 title="Save"
