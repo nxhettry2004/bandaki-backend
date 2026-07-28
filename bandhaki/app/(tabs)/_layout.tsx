@@ -21,6 +21,10 @@ import {
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../src/constants/colors";
+import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
+
+// expo-router renders this instead of crashing when a tab screen throws.
+export { ScreenErrorBoundary as ErrorBoundary };
 
 function FABPopup({
   visible,
