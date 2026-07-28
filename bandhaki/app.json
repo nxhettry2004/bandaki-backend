@@ -68,7 +68,9 @@
       "router": {},
       "eas": {
         "projectId": "11b551f4-50f8-454a-84ca-bfc402be29d2"
-      }
+      },
+      "cloudinaryCloudName": "dw14vhtln",
+      "cloudinaryUploadPreset": "bandhaki_uploads"
     },
     "owner": "kreemps-team"
   }

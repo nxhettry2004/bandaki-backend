@@ -8,16 +8,28 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "dw14vhtln",
+        "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "bandhaki_uploads"
       }
     },
     "preview": {
       "channel": "preview",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "dw14vhtln",
+        "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "bandhaki_uploads"
       }
     },
     "production": {
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "dw14vhtln",
+        "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "bandhaki_uploads"
+      }
     }
   }
 }
