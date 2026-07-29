@@ -172,8 +172,10 @@ export default function TabLayout() {
     router.push("/(bandhaki)/new");
   };
 
-  const tabBarHeight = 56 + insets.bottom;
-  const fabBottom = tabBarHeight / 2;
+  // The tab bar is 56dp of content sitting on top of the system navigation bar
+  // inset. Offset the FAB by that inset so it keeps floating over the tab row on
+  // devices with 3-button navigation instead of sinking into the nav bar.
+  const fabBottom = insets.bottom + 28;
 
   return (
     <View style={{ flex: 1 }}>

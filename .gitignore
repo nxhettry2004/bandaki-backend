@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.local
+*.apk
+*.log
+.DS_Store
+claude.txt
+dist/
+build/
+.expo/
+.next/
+coverage/

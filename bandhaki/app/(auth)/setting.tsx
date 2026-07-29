@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useTheme } from '../../src/hooks/useTheme';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
@@ -16,6 +16,7 @@ const OTP_ATTEMPTS_KEY = "otp_failed_attempts";
 const Setting = () => {
   const { colors } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [endpoint, setEndpoint] = useState<string>("");
   const [isOtpVerified, setIsOtpVerified] = useState(false);
@@ -120,10 +121,20 @@ const Setting = () => {
             visible={showOtpModal}
             transparent
             animationType="slide"
+            statusBarTranslucent
+            navigationBarTranslucent
             onRequestClose={handleBackFromOtp}
           >
             <View style={[styles.modalContainer, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
-              <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              <View
+                style={[
+                  styles.modalContent,
+                  {
+                    backgroundColor: colors.surface,
+                    paddingBottom: insets.bottom + 24,
+                  },
+                ]}
+              >
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
                     Enter OTP
@@ -254,7 +265,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
-    paddingBottom: 32,
   },
   modalHeader: {
     flexDirection: "row",

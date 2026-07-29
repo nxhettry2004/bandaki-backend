@@ -13,7 +13,7 @@ import {
   Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
@@ -75,6 +75,7 @@ function formatAmount(value?: number) {
 export default function LoanDetailScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -1029,9 +1030,19 @@ export default function LoanDetailScreen() {
           visible={isImagePreviewVisible}
           animationType="fade"
           transparent
+          statusBarTranslucent
+          navigationBarTranslucent
           onRequestClose={closeImagePreview}
         >
-          <View style={styles.previewOverlay}>
+          <View
+            style={[
+              styles.previewOverlay,
+              {
+                paddingTop: insets.top + 24,
+                paddingBottom: insets.bottom + 24,
+              },
+            ]}
+          >
             <TouchableOpacity
               style={styles.previewCloseButton}
               onPress={closeImagePreview}
@@ -1075,6 +1086,8 @@ export default function LoanDetailScreen() {
         visible={!!printTarget}
         animationType="fade"
         transparent
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={closePrintOptions}
       >
         <TouchableOpacity
@@ -1084,7 +1097,13 @@ export default function LoanDetailScreen() {
         >
           <TouchableOpacity
             activeOpacity={1}
-            style={[styles.printModalCard, { backgroundColor: colors.surface }]}
+            style={[
+              styles.printModalCard,
+              {
+                backgroundColor: colors.surface,
+                paddingBottom: insets.bottom + 24,
+              },
+            ]}
           >
             <Text style={[styles.printModalTitle, { color: colors.text }]}>
               {printTarget?.type === "agreement" ? "Loan Agreement" : "Payment Receipt"}
@@ -1301,7 +1320,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.92)",
     justifyContent: "center",
     paddingHorizontal: 12,
-    paddingVertical: 24,
   },
   previewCloseButton: {
     alignSelf: "flex-end",
@@ -1383,7 +1401,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    paddingBottom: 32,
   },
   printModalTitle: { fontSize: 17, fontWeight: "700", marginBottom: 4 },
   printModalSubtitle: { fontSize: 13, marginBottom: 16 },

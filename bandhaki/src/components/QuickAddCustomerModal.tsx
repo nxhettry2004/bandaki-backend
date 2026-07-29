@@ -12,6 +12,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Toast from 'react-native-toast-message';
 import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomerFormSchema, type CustomerFormSchemaType } from '../schema/FormSchema';
 import { createCustomer } from '../api/endpoints';
@@ -28,6 +29,7 @@ interface QuickAddCustomerModalProps {
 
 export function QuickAddCustomerModal({ visible, onClose, onCreated }: QuickAddCustomerModalProps) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
 
   const {
@@ -68,10 +70,20 @@ export function QuickAddCustomerModal({ visible, onClose, onCreated }: QuickAddC
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={handleClose}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}
+        style={[
+          styles.overlay,
+          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
+        ]}
       >
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <View style={styles.header}>
