@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
-import path from "path";
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+// Resolved from the working directory, so it picks up backend/.env locally and
+// is a silent no-op on Vercel, where variables come from the project settings.
+dotenv.config();
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV || "development",

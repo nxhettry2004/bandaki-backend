@@ -2,11 +2,14 @@
   "name": "bandhaki-backend",
   "version": "1.0.0",
   "description": "Express.js backend API for Bandhaki gold loan ledger management",
-  "main": "dist/server.js",
+  "main": "dist/src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "seed:superadmin": "tsx src/scripts/seed-superadmin.ts",
     "seed:tenants": "tsx src/scripts/seed-tenants.ts"
   },
