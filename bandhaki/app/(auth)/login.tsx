@@ -23,6 +23,7 @@ import {
 } from "../../src/schema/FormSchema";
 import { loginApi } from "../../src/api/endpoints";
 import { API_URL } from "../../src/api/axiosClient";
+import { maybeInitialPull } from "../../src/sync/useSyncTriggers";
 import { useTheme } from "../../src/hooks/useTheme";
 import { Input } from "../../src/components/ui/Input";
 import { Button } from "../../src/components/ui/Button";
@@ -88,6 +89,9 @@ export default function LoginScreen() {
       if (result.success) {
         await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
         Toast.show({ type: "success", text1: "Login successful" });
+        // The sync engine mounted before a token existed, so its first-pull
+        // attempt was a no-op. Kick it now that this device is authenticated.
+        maybeInitialPull();
         router.replace("/(tabs)/dashboard");
       } else {
         Toast.show({

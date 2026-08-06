@@ -9,6 +9,9 @@ export interface IPayment extends Document {
   paymentMethod: string;
   notes?: string;
   tenantId: mongoose.Types.ObjectId;
+  // Idempotency key for offline-payment replay. Payments are append-only, so
+  // there is deliberately no deletedAt tombstone field.
+  clientMutationId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,12 +26,17 @@ const PaymentSchema: Schema = new Schema(
     paymentMethod: { type: String, required: true },
     notes: { type: String },
     tenantId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    clientMutationId: { type: String },
   },
   { timestamps: true }
 );
 
 PaymentSchema.index({ tenantId: 1, bandhaki: 1 });
 PaymentSchema.index({ tenantId: 1, createdAt: -1 });
+PaymentSchema.index(
+  { tenantId: 1, clientMutationId: 1 },
+  { unique: true, sparse: true }
+);
 
 const PaymentModel =
   mongoose.models.Payment || mongoose.model<IPayment>("Payment", PaymentSchema);

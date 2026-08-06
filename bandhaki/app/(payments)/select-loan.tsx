@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Calendar,
   Wallet,
+  UserPlus,
 } from "lucide-react-native";
 
 import { useCustomers } from "../../src/hooks/useCustomers";
@@ -23,6 +24,7 @@ import { Select } from "../../src/components/ui/Select";
 import { Card } from "../../src/components/ui/Card";
 import { EmptyState } from "../../src/components/ui/EmptyState";
 import { LoadingSkeleton } from "../../src/components/ui/Loading";
+import { QuickAddCustomerModal } from "../../src/components/QuickAddCustomerModal";
 import type { LoanListEntry } from "../../src/types";
 
 function formatAmount(v?: number) {
@@ -36,6 +38,7 @@ export default function SelectLoanForPaymentScreen() {
   const { data: customers = [], isLoading: cusLoading } = useCustomers();
   const { data: activeLoans = [], isLoading: loansLoading } = useActiveLoans();
   const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   const customerOptions = useMemo(
     () =>
@@ -87,6 +90,25 @@ export default function SelectLoanForPaymentScreen() {
               onValueChange={setSelectedCustomer}
               searchable
             />
+            <TouchableOpacity
+              onPress={() => setQuickAddVisible(true)}
+              style={[
+                styles.addCustomerRow,
+                { borderTopColor: colors.border },
+              ]}
+            >
+              <View
+                style={[
+                  styles.addCustomerIcon,
+                  { backgroundColor: colors.primaryLight },
+                ]}
+              >
+                <UserPlus size={16} color={colors.primary} />
+              </View>
+              <Text style={[styles.addCustomerText, { color: colors.primary }]}>
+                + Add new customer
+              </Text>
+            </TouchableOpacity>
           </Card>
 
           {/* Loans list */}
@@ -153,6 +175,14 @@ export default function SelectLoanForPaymentScreen() {
           )}
         </ScrollView>
       )}
+      <QuickAddCustomerModal
+        visible={quickAddVisible}
+        onClose={() => setQuickAddVisible(false)}
+        onCreated={(customer) => {
+          setQuickAddVisible(false);
+          setSelectedCustomer(customer._id);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -179,6 +209,22 @@ const styles = StyleSheet.create({
   },
   scrollContent: { padding: 16, paddingBottom: 40 },
   selectCard: { marginBottom: 20 },
+  addCustomerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  addCustomerIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addCustomerText: { fontSize: 13, fontWeight: "600" },
   sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 12 },
   loanItem: { marginBottom: 8 },
   loanCard: { marginBottom: 0 },

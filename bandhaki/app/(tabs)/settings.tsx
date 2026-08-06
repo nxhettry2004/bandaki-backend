@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import {
   User,
   Mail,
@@ -18,18 +21,78 @@ import {
   Moon,
   Globe,
   ChevronRight,
+  RefreshCw,
+  CloudDownload,
+  AlertTriangle,
 } from 'lucide-react-native';
 
 import { useAuth } from '../../src/hooks/useAuth';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useSyncStatus } from '../../src/sync/syncStatusStore';
+import { downloadAllFromCloud, syncNowOrThrow } from '../../src/sync/orchestrator';
 import { Card } from '../../src/components/ui/Card';
 import { Button } from '../../src/components/ui/Button';
 import { LoadingScreen } from '../../src/components/ui/Loading';
+
+function formatRelative(date: Date | null): string {
+  if (!date) return 'Never — tap "Download all data" to get started';
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  return date.toLocaleDateString();
+}
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
+  const { isOnline, isSyncing, pendingCount, blockedCount, lastSyncedAt } =
+    useSyncStatus();
+  const [busy, setBusy] = useState<'sync' | 'download' | null>(null);
+
+  const runCloudAction = async (
+    kind: 'sync' | 'download',
+    action: () => Promise<void>,
+    successText: string
+  ) => {
+    setBusy(kind);
+    try {
+      await action();
+      Toast.show({ type: 'success', text1: successText });
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Sync failed',
+        text2: error?.message || 'Could not reach the server',
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleSyncNow = () =>
+    runCloudAction('sync', () => syncNowOrThrow('settings'), 'Sync complete');
+
+  const handleDownloadAll = () => {
+    Alert.alert(
+      'Download all cloud data',
+      'Re-downloads every customer, loan and payment on your account so they are available offline. Changes waiting to be uploaded are kept.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Download',
+          onPress: () =>
+            runCloudAction(
+              'download',
+              downloadAllFromCloud,
+              'Cloud data downloaded'
+            ),
+        },
+      ]
+    );
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -112,6 +175,68 @@ export default function SettingsScreen() {
             label="Member Since"
             value={formatDate(user?.createdAt)}
             colors={colors}
+          />
+        </Card>
+
+        {/* Offline data */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+          OFFLINE DATA
+        </Text>
+        <Card style={styles.menuCard}>
+          <View style={styles.settingRow}>
+            <View style={[styles.settingIcon, { backgroundColor: colors.infoLight }]}>
+              <RefreshCw size={16} color={colors.info} />
+            </View>
+            <View style={styles.settingContent}>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>
+                Last synced
+              </Text>
+              <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
+                {formatRelative(lastSyncedAt)}
+              </Text>
+              <Text style={[styles.menuSubtitle, { color: colors.textTertiary }]}>
+                {isOnline ? 'Online' : 'Offline'}
+                {pendingCount > 0 ? ` · ${pendingCount} waiting to upload` : ''}
+              </Text>
+            </View>
+          </View>
+
+          {blockedCount > 0 && (
+            <>
+              <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+              <SettingMenuItem
+                icon={<AlertTriangle size={16} color={colors.error} />}
+                iconBg={colors.errorLight}
+                title={`${blockedCount} sync issue${blockedCount === 1 ? '' : 's'}`}
+                subtitle="Review changes the server rejected"
+                colors={colors}
+                onPress={() => router.push('/(sync)/issues')}
+              />
+            </>
+          )}
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <SyncActionRow
+            icon={<RefreshCw size={16} color={colors.primary} />}
+            iconBg={colors.primaryLight}
+            title="Sync now"
+            subtitle="Upload queued changes and fetch what's new"
+            colors={colors}
+            disabled={!isOnline || busy !== null || isSyncing}
+            loading={busy === 'sync'}
+            onPress={handleSyncNow}
+          />
+
+          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+          <SyncActionRow
+            icon={<CloudDownload size={16} color={colors.success} />}
+            iconBg={colors.successLight}
+            title="Download all data"
+            subtitle="Copy everything on your account to this device"
+            colors={colors}
+            disabled={!isOnline || busy !== null || isSyncing}
+            loading={busy === 'download'}
+            onPress={handleDownloadAll}
           />
         </Card>
 
@@ -231,6 +356,48 @@ function SettingMenuItem({
         <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
       </View>
       <ChevronRight size={16} color={colors.textTertiary} />
+    </TouchableOpacity>
+  );
+}
+
+function SyncActionRow({
+  icon,
+  iconBg,
+  title,
+  subtitle,
+  colors,
+  disabled,
+  loading,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  subtitle: string;
+  colors: any;
+  disabled: boolean;
+  loading: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.settingRow, disabled && { opacity: 0.5 }]}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.settingIcon, { backgroundColor: iconBg }]}>{icon}</View>
+      <View style={styles.settingContent}>
+        <Text style={[styles.menuTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>
+          {subtitle}
+        </Text>
+      </View>
+      {loading ? (
+        <ActivityIndicator size="small" color={colors.primary} />
+      ) : (
+        <ChevronRight size={16} color={colors.textTertiary} />
+      )}
     </TouchableOpacity>
   );
 }

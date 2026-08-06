@@ -89,4 +89,17 @@ export class BandhakiController {
       next(error);
     }
   }
+
+  async getUpdatesSince(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const since = req.query.since as string | undefined;
+      const result = await bandhakiService.getUpdatesSince(
+        req.user!.tenantId,
+        since ? new Date(since) : undefined
+      );
+      sendSuccess(res, result, "Loan sync data fetched successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
 }

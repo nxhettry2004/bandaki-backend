@@ -10,6 +10,8 @@ const controller = new PaymentController();
 router.use(authenticate);
 
 router.post("/", validate(CreatePaymentSchema), controller.create);
+// Incremental pull-sync — registered before the bandhaki route for clarity.
+router.get("/sync", controller.getUpdatesSince);
 router.get("/bandhaki/:bandhakiId", controller.getByBandhaki);
 
 export default router;

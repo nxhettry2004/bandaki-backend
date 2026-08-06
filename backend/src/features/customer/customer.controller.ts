@@ -49,4 +49,17 @@ export class CustomerController {
       next(error);
     }
   }
+
+  async getUpdatesSince(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const since = req.query.since as string | undefined;
+      const result = await customerService.getUpdatesSince(
+        req.user!.tenantId,
+        since ? new Date(since) : undefined
+      );
+      sendSuccess(res, result, "Customer sync data fetched successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
 }

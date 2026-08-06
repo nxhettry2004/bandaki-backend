@@ -1,18 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import { getCustomers } from '../api/endpoints';
+import { listCustomers } from '../db/repositories/customers.repo';
 
 export function useCustomers() {
   return useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
       try {
-        return await getCustomers();
+        return await listCustomers();
       } catch (error) {
-        console.error('Error fetching customers:', error);
+        console.error('Error reading customers:', error);
         return [];
       }
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity,
     gcTime: 15 * 60 * 1000,
   });
 }

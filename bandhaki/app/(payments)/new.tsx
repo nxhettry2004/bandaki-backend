@@ -12,16 +12,18 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { ArrowLeft, CreditCard, AlertCircle } from "lucide-react-native";
+import { ArrowLeft, CreditCard, AlertCircle, CloudOff } from "lucide-react-native";
 
 import {
   BandhakiPaymentSchema,
   type BandhakiPaymentSchemaType,
 } from "../../src/schema/FormSchema";
-import { getBandhakiById, createPayment } from "../../src/api/endpoints";
+import { useLoan } from "../../src/hooks/useLoans";
+import { createPaymentLocal } from "../../src/db/repositories/payments.repo";
+import { useSyncMutation } from "../../src/hooks/useSyncMutation";
 import { useTheme } from "../../src/hooks/useTheme";
+import { useIsOnline } from "../../src/sync/netInfo";
 import { Input } from "../../src/components/ui/Input";
 import { Button } from "../../src/components/ui/Button";
 import { Card } from "../../src/components/ui/Card";
@@ -41,19 +43,25 @@ function formatAmount(value?: number) {
 export default function NewPaymentScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { loanId } = useLocalSearchParams<{ loanId: string }>();
-  const [loading, setLoading] = useState(false);
+  const isOnline = useIsOnline();
   const [showDatePicker, setShowDatePicker] = useState(false);
-
-  // Fetch loan details so we can show context
-  const { data: loanData, isLoading: loanLoading } = useQuery({
-    queryKey: ["loan", loanId],
-    queryFn: () => getBandhakiById(loanId!),
-    enabled: !!loanId,
-  });
+  const { data: loanData, isLoading: loanLoading } = useLoan(loanId);
 
   const loan = loanData?.entry;
+
+  const recordPayment = useSyncMutation(
+    (data: BandhakiPaymentSchemaType) =>
+      createPaymentLocal({
+        bandhakiLocalId: loanId!,
+        paymentDate: data.paymentDate,
+        amount: data.amount,
+        interestComponent: data.interestComponent ?? 0,
+        principalComponent: data.principalComponent ?? 0,
+        paymentMethod: data.paymentMethod,
+        notes: data.notes || "",
+      })
+  );
 
   const {
     control,
@@ -103,44 +111,20 @@ export default function NewPaymentScreen() {
   }, [amount, loan, setValue]);
 
   const onSubmit = async (data: BandhakiPaymentSchemaType) => {
-    setLoading(true);
     try {
-      const result = await createPayment({
-        bandhaki: loanId!,
-        paymentDate: data.paymentDate,
-        amount: data.amount,
-        interestComponent: data.interestComponent ?? 0,
-        principalComponent: data.principalComponent ?? 0,
-        paymentMethod: data.paymentMethod,
-        notes: data.notes || "",
+      await recordPayment.mutateAsync(data);
+      Toast.show({
+        type: "success",
+        text1: "Payment recorded",
+        text2: "Will sync to server when online",
       });
-
-      if (result.success) {
-        Toast.show({
-          type: "success",
-          text1: "Payment recorded successfully!",
-        });
-        queryClient.invalidateQueries({ queryKey: ["loan", loanId] });
-        queryClient.invalidateQueries({ queryKey: ["payments", loanId] });
-        queryClient.invalidateQueries({ queryKey: ["loans"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-        queryClient.invalidateQueries({ queryKey: ["activeLoans"] });
-        router.back();
-      } else {
-        Toast.show({
-          type: "error",
-          text1: "Error",
-          text2: result.message || "Failed to record payment",
-        });
-      }
+      router.back();
     } catch (error: any) {
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: error?.response?.data?.message || "Something went wrong",
+        text2: error?.message || "Something went wrong",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -388,10 +372,38 @@ export default function NewPaymentScreen() {
           />
 
           {/* Submit */}
+          {!isOnline && (
+            <View
+              style={[
+                styles.infoBar,
+                { backgroundColor: "#FEF2F2", borderColor: "#FECACA", marginBottom: 12 },
+              ]}
+            >
+              <CloudOff size={16} color="#B91C1C" />
+              <Text style={[styles.infoBarText, { color: "#991B1B" }]}>
+                You are offline. This payment will be saved on this device and
+                synced to the server when you reconnect.
+              </Text>
+            </View>
+          )}
+          {loan?._pendingSync && (
+            <View
+              style={[
+                styles.infoBar,
+                { backgroundColor: "#FFFBEB", borderColor: "#FDE68A", marginBottom: 12 },
+              ]}
+            >
+              <CloudOff size={16} color="#B45309" />
+              <Text style={[styles.infoBarText, { color: "#92400E" }]}>
+                This loan is not yet synced. The interest preview is estimated and
+                will be confirmed once the loan is synced to the server.
+              </Text>
+            </View>
+          )}
           <Button
             title="Record Payment"
             onPress={handleSubmit(onSubmit)}
-            loading={loading}
+            loading={recordPayment.isPending}
             fullWidth
             size="lg"
             style={{ marginTop: 24, marginBottom: 16, borderRadius: 6 }}

@@ -13,6 +13,8 @@ router.post("/", validate(CreateBandhakiSchema), controller.create);
 router.get("/active", controller.getActive);
 router.get("/", controller.getAll);
 router.get("/customer/:customerId", controller.getByCustomer);
+// Incremental pull-sync — must be registered before the "/:id" route.
+router.get("/sync", controller.getUpdatesSince);
 router.get("/:id", controller.getById);
 router.put("/:id", validate(UpdateBandhakiSchema), controller.update);
 router.post("/:id/images", validate(AddImageSchema), controller.addImage);

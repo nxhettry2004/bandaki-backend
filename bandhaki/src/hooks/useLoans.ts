@@ -1,13 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import { getAllBandhaki, getActiveBandhaki } from '../api/endpoints';
+import {
+  getBandhakiDetail,
+  listActiveBandhaki,
+  listBandhakiPaginated,
+} from '../db/repositories/bandhaki.repo';
 
 export function useLoans(params?: { page?: number; limit?: number; query?: string; status?: string }) {
   return useQuery({
     queryKey: ['loans', params],
     queryFn: async () => {
-      return await getAllBandhaki(params || {});
+      return await listBandhakiPaginated(params || {});
     },
-    staleTime: 60 * 1000,
+    staleTime: Infinity,
   });
 }
 
@@ -15,9 +19,20 @@ export function useActiveLoans() {
   return useQuery({
     queryKey: ['activeLoans'],
     queryFn: async () => {
-      const res = await getActiveBandhaki();
-      return res.loans || [];
+      return await listActiveBandhaki();
     },
-    staleTime: 60 * 1000,
+    staleTime: Infinity,
+  });
+}
+
+export function useLoan(localId?: string) {
+  return useQuery({
+    queryKey: ['loan', localId],
+    queryFn: async () => {
+      const entry = await getBandhakiDetail(localId!);
+      return { entry };
+    },
+    enabled: !!localId,
+    staleTime: Infinity,
   });
 }

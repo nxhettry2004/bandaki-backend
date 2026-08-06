@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Wallet,
@@ -20,7 +19,7 @@ import {
   ChevronRight,
 } from "lucide-react-native";
 
-import { getBandhakiByCustomer } from "../../src/api/endpoints";
+import { useCustomerLoans } from "../../src/hooks/usePayments";
 import { useTheme } from "../../src/hooks/useTheme";
 import { StatusBadge } from "../../src/components/ui/StatusBadge";
 import { EmptyState } from "../../src/components/ui/EmptyState";
@@ -51,11 +50,7 @@ export default function CustomerLoansScreen() {
     isLoading,
     refetch,
     isRefetching,
-  } = useQuery({
-    queryKey: ["customerLoans", customerId],
-    queryFn: () => getBandhakiByCustomer(customerId!),
-    enabled: !!customerId,
-  });
+  } = useCustomerLoans(customerId);
 
   const loans: DetailedLoanEntry[] = loansData?.loans || [];
 

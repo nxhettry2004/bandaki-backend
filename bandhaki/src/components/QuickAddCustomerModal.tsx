@@ -10,12 +10,19 @@ import {
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomerFormSchema, type CustomerFormSchemaType } from '../schema/FormSchema';
-import { createCustomer } from '../api/endpoints';
+import {
+  createCustomerLocal,
+  DuplicateCustomerError,
+} from '../db/repositories/customers.repo';
+import { syncNow } from '../sync/orchestrator';
+import { refreshSyncStatus } from '../sync/syncStatusStore';
+import { invalidateLocalData } from '../sync/useSyncTriggers';
 import { useTheme } from '../hooks/useTheme';
 import type { Customer } from '../types';
 import { Input } from './ui/Input';
@@ -30,6 +37,7 @@ interface QuickAddCustomerModalProps {
 export function QuickAddCustomerModal({ visible, onClose, onCreated }: QuickAddCustomerModalProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
   const {
@@ -50,19 +58,27 @@ export function QuickAddCustomerModal({ visible, onClose, onCreated }: QuickAddC
   const onSubmit = async (data: CustomerFormSchemaType) => {
     setLoading(true);
     try {
-      const result = await createCustomer(data);
-      if (result.success && result.data) {
-        Toast.show({ type: 'success', text1: 'Customer added' });
-        reset({ name: '', phone: '', address: '', idProof: '' });
-        onCreated(result.data);
-      } else {
-        Toast.show({ type: 'error', text1: 'Error', text2: result.message || 'Failed to add customer' });
-      }
+      const created = await createCustomerLocal(data);
+
+      // Awaited so the caller's customer list already contains the new row by
+      // the time it selects it — otherwise the selector stays empty until the
+      // user leaves the form and comes back.
+      await queryClient.invalidateQueries({ queryKey: ['customers'] });
+      invalidateLocalData(queryClient);
+      await refreshSyncStatus();
+
+      Toast.show({ type: 'success', text1: 'Customer added' });
+      reset({ name: '', phone: '', address: '', idProof: '' });
+      onCreated(created);
+      syncNow('quick-add-customer');
     } catch (error: any) {
       Toast.show({
         type: 'error',
-        text1: 'Error',
-        text2: error?.response?.data?.message || 'Something went wrong',
+        text1:
+          error instanceof DuplicateCustomerError
+            ? 'Customer already exists'
+            : 'Error',
+        text2: error?.message || 'Something went wrong',
       });
     } finally {
       setLoading(false);
