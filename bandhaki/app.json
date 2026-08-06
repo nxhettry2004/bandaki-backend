@@ -59,7 +59,8 @@
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to attach loan images.",
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to capture loan images."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

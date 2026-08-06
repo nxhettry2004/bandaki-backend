@@ -1,15 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { getDashboard } from '../api/endpoints';
+import { computeDashboardLocal } from '../db/repositories/dashboard.repo';
 
 export function useDashboard() {
   return useQuery({
     queryKey: ['dashboardData'],
     queryFn: async () => {
-      return await getDashboard();
+      return await computeDashboardLocal();
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: Infinity,
     gcTime: 10 * 60 * 1000,
-    retry: 2,
-    retryDelay: (attemptIndex: number) => Math.min(500 * 2 ** attemptIndex, 3000),
+    retry: 1,
   });
 }
