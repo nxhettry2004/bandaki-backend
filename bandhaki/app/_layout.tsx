@@ -9,6 +9,9 @@ import Toast from 'react-native-toast-message';
 import { useColorScheme } from 'react-native';
 import { getToken } from '../src/api/axiosClient';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
+import { useMigrateDb } from '../src/db/migrator';
+import { useSyncTriggers } from '../src/sync/useSyncTriggers';
+import { SyncStatusBanner } from '../src/components/SyncStatusBanner';
 import 'react-native-reanimated';
 
 const queryClient = new QueryClient({
@@ -17,7 +20,11 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000,
       gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
-      refetchOnMount: false,
+      // The local-data queries all set staleTime: Infinity, so this only
+      // refetches them once something has invalidated them — a sync landing new
+      // rows, or a local write. With it off, a screen that was unmounted at
+      // invalidation time kept serving its old snapshot indefinitely.
+      refetchOnMount: true,
       refetchOnReconnect: false,
       retry: 1,
       retryDelay: 500,
@@ -27,6 +34,29 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Runs SQLite migrations once before anything else renders, mirroring the
+// existing AuthGate pattern. Renders a blank screen until the schema is ready.
+function MigrationGate({ children }: { children: React.ReactNode }) {
+  const { success, error } = useMigrateDb();
+
+  if (!success) {
+    if (error) {
+      console.error('Database migration failed:', error);
+    }
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
+// Fires the sync engine's lifecycle triggers (offline→online, app-active,
+// first-launch pull) only once the app is authenticated. Mounted as a sibling
+// of the Stack so it survives route changes.
+function SyncEngine() {
+  useSyncTriggers();
+  return null;
+}
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
@@ -75,22 +105,27 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <BottomSheetModalProvider>
           <QueryClientProvider client={queryClient}>
-            <AuthGate>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  animation: 'slide_from_right',
-                }}
-              >
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="(bandhaki)" options={{ headerShown: false }} />
-                <Stack.Screen name="(customers)" options={{ headerShown: false }} />
-                <Stack.Screen name="(payments)" options={{ headerShown: false }} />
-              </Stack>
-            </AuthGate>
-            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-            <Toast />
+            <MigrationGate>
+              <AuthGate>
+                <SyncEngine />
+                <SyncStatusBanner />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    animation: 'slide_from_right',
+                  }}
+                >
+                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(bandhaki)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(customers)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(payments)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(sync)" options={{ headerShown: false }} />
+                </Stack>
+              </AuthGate>
+              <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+              <Toast />
+            </MigrationGate>
           </QueryClientProvider>
         </BottomSheetModalProvider>
       </GestureHandlerRootView>
