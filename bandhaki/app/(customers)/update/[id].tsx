@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import { ArrowLeft, AlertTriangle } from "lucide-react-native";
 
@@ -19,7 +19,11 @@ import {
   CustomerFormSchema,
   type CustomerFormSchemaType,
 } from "../../../src/schema/FormSchema";
-import { getCustomerById, updateCustomer } from "../../../src/api/endpoints";
+import {
+  getCustomerById,
+  updateCustomerLocal,
+} from "../../../src/db/repositories/customers.repo";
+import { useSyncMutation } from "../../../src/hooks/useSyncMutation";
 import { useTheme } from "../../../src/hooks/useTheme";
 import { Input } from "../../../src/components/ui/Input";
 import { Button } from "../../../src/components/ui/Button";
@@ -27,9 +31,7 @@ import { Button } from "../../../src/components/ui/Button";
 export default function UpdateCustomerScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [loading, setLoading] = useState(false);
 
   const {
     data: customer,
@@ -67,33 +69,25 @@ export default function UpdateCustomerScreen() {
     }
   }, [customer, reset]);
 
+  const updateCustomer = useSyncMutation(
+    (data: CustomerFormSchemaType) => updateCustomerLocal(id!, data)
+  );
+
   const onSubmit = async (data: CustomerFormSchemaType) => {
-    setLoading(true);
     try {
-      const result = await updateCustomer(id!, data);
-      if (result.success) {
-        Toast.show({
-          type: "success",
-          text1: "Customer updated successfully!",
-        });
-        queryClient.invalidateQueries({ queryKey: ["customers"] });
-        queryClient.invalidateQueries({ queryKey: ["customer", id] });
-        router.back();
-      } else {
-        Toast.show({
-          type: "error",
-          text1: "Error",
-          text2: result.message || "Failed to update customer",
-        });
-      }
+      await updateCustomer.mutateAsync(data);
+      Toast.show({
+        type: "success",
+        text1: "Customer updated",
+        text2: "Will sync to server when online",
+      });
+      router.back();
     } catch (error: any) {
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: error?.response?.data?.message || "Something went wrong",
+        text2: error?.message || "Something went wrong",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -216,7 +210,7 @@ export default function UpdateCustomerScreen() {
         <Button
           title="Update Customer"
           onPress={handleSubmit(onSubmit)}
-          loading={loading}
+          loading={updateCustomer.isPending}
           fullWidth
           size="lg"
           style={{ marginTop: 24, borderRadius: 6 }}

@@ -22,7 +22,7 @@ import {
   AlertTriangle,
 } from "lucide-react-native";
 
-import { getCustomerById } from "../../src/api/endpoints";
+import { getCustomerById } from "../../src/db/repositories/customers.repo";
 import { useTheme } from "../../src/hooks/useTheme";
 import { Card } from "../../src/components/ui/Card";
 import { Button } from "../../src/components/ui/Button";
@@ -108,6 +108,18 @@ export default function CustomerDetailScreen() {
       >
         {/* Profile Card */}
         <Card style={{ marginBottom: 16 }}>
+          {(customer as any)._pendingSync ? (
+            <View
+              style={[
+                styles.pendingBadge,
+                { backgroundColor: colors.primaryLight },
+              ]}
+            >
+              <Text style={[styles.pendingBadgeText, { color: colors.primary }]}>
+                Will sync when online
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.profileHeader}>
             <View
               style={[
@@ -311,4 +323,12 @@ const styles = StyleSheet.create({
   divider: { height: 1, marginVertical: 12 },
   noInfoText: { fontSize: 13, textAlign: "center", paddingVertical: 12 },
   actions: { gap: 10, marginBottom: 16 },
+  pendingBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 10,
+  },
+  pendingBadgeText: { fontSize: 11, fontWeight: "600" },
 });

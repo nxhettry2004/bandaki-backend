@@ -8,21 +8,19 @@ import {
   Platform,
   Alert,
   Image,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQueryClient } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
-import { ArrowLeft, Camera, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Camera, Trash2, CloudOff } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { ImagePickerAsset } from 'expo-image-picker';
 
 import { BandhakiFormSchema, type BandhakiFormSchemaType } from '../../src/schema/FormSchema';
-import { createBandhaki } from '../../src/api/endpoints';
-import { uploadImageToCloudinary } from '../../src/api/cloudinary';
+import { createBandhakiLocal } from '../../src/db/repositories/bandhaki.repo';
+import { useSyncMutation } from '../../src/hooks/useSyncMutation';
 import { useCustomers } from '../../src/hooks/useCustomers';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Input } from '../../src/components/ui/Input';
@@ -30,16 +28,17 @@ import { Button } from '../../src/components/ui/Button';
 import { Card } from '../../src/components/ui/Card';
 import { Select } from '../../src/components/ui/Select';
 import { QuickAddCustomerModal } from '../../src/components/QuickAddCustomerModal';
-import type { LoanImage } from '../../src/types';
+
+interface PendingImage {
+  localUri: string;
+  name: string;
+}
 
 export default function NewBandhakiScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { data: customers = [] } = useCustomers();
-  const [loading, setLoading] = useState(false);
-  const [images, setImages] = useState<LoanImage[]>([]);
-  const [uploadingCount, setUploadingCount] = useState(0);
+  const [images, setImages] = useState<PendingImage[]>([]);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   const {
@@ -72,26 +71,38 @@ export default function NewBandhakiScreen() {
     value: c._id,
   }));
 
-  const uploadAssets = async (assets: ImagePickerAsset[]) => {
-    setUploadingCount(assets.length);
-    try {
-      const uploaded = await Promise.all(
-        assets.map((asset) => uploadImageToCloudinary(asset))
-      );
-      setImages((prev) => {
-        const next = [...prev, ...uploaded];
-        setValue('images', next);
-        return next;
-      });
-    } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Upload failed',
-        text2: 'Could not upload one or more images. Please try again.',
-      });
-    } finally {
-      setUploadingCount(0);
-    }
+  const createLoan = useSyncMutation(
+    (data: BandhakiFormSchemaType) =>
+      createBandhakiLocal(
+        {
+          customerLocalId: data.customer,
+          loanDate: data.loanDate,
+          principalAmount: data.principalAmount,
+          interestRate: data.interestRate,
+          interestType: data.interestType as 'simple' | 'compound',
+          goldItems: [data.goldItems],
+          totalValuation: data.totalValuation,
+          status: data.status,
+          paymentStatus: data.paymentStatus,
+        },
+        images
+      )
+  );
+
+  const addImages = async (assets: ImagePickerAsset[]) => {
+    const picked = assets
+      .filter((a) => a.uri)
+      .map((a) => ({
+        localUri: a.uri,
+        name: a.fileName || `Image ${images.length + 1}`,
+      }));
+    if (picked.length === 0) return;
+    setImages((prev) => [...prev, ...picked]);
+    Toast.show({
+      type: 'success',
+      text1: `${picked.length} photo${picked.length > 1 ? 's' : ''} added`,
+      text2: 'Will upload when online',
+    });
   };
 
   const pickImageFromGallery = async () => {
@@ -102,7 +113,7 @@ export default function NewBandhakiScreen() {
     });
 
     if (result.canceled || !result.assets?.length) return;
-    await uploadAssets(result.assets);
+    await addImages(result.assets);
   };
 
   const captureImageFromCamera = async () => {
@@ -113,7 +124,7 @@ export default function NewBandhakiScreen() {
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
     if (result.canceled || !result.assets?.length) return;
-    await uploadAssets(result.assets);
+    await addImages(result.assets);
   };
 
   const handleUploadPress = () => {
@@ -125,43 +136,24 @@ export default function NewBandhakiScreen() {
   };
 
   const removeImage = (index: number) => {
-    const updated = images.filter((_, i) => i !== index);
-    setImages(updated);
-    setValue('images', updated);
+    setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const onSubmit = async (data: BandhakiFormSchemaType) => {
-    setLoading(true);
     try {
-      const result = await createBandhaki({
-        ...data,
-        interestType: data.interestType as 'simple' | 'compound',
-        goldItems: [data.goldItems],
-        images,
+      await createLoan.mutateAsync(data);
+      Toast.show({
+        type: 'success',
+        text1: 'Loan created',
+        text2: 'Will sync to server when online',
       });
-
-      if (result.success) {
-        Toast.show({ type: 'success', text1: 'Loan created successfully!' });
-        queryClient.invalidateQueries({ queryKey: ['loans'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboardData'] });
-        queryClient.invalidateQueries({ queryKey: ['activeLoans'] });
-        queryClient.invalidateQueries({ queryKey: ['customerLoans'] });
-        router.back();
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: result.message || 'Failed to create loan',
-        });
-      }
+      router.back();
     } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error?.response?.data?.message || 'Something went wrong',
+        text2: error?.message || 'Something went wrong',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -367,37 +359,42 @@ export default function NewBandhakiScreen() {
           style={[
             styles.uploadArea,
             { borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
-            uploadingCount > 0 && { opacity: 0.6 },
           ]}
           onPress={handleUploadPress}
           activeOpacity={0.7}
-          disabled={uploadingCount > 0}
         >
-          {uploadingCount > 0 ? (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginBottom: 12 }} />
-          ) : (
-            <View style={[styles.uploadIconBg, { backgroundColor: colors.primaryLight }]}>
-              <Camera size={28} color={colors.primary} />
-            </View>
-          )}
+          <View style={[styles.uploadIconBg, { backgroundColor: colors.primaryLight }]}>
+            <Camera size={28} color={colors.primary} />
+          </View>
           <Text style={[styles.uploadTitle, { color: colors.text }]}>
-            {uploadingCount > 0
-              ? `Uploading ${uploadingCount} photo${uploadingCount > 1 ? 's' : ''}...`
-              : images.length > 0
-                ? 'Add More Photos'
-                : 'Upload Photos'}
+            {images.length > 0 ? 'Add More Photos' : 'Add Photos'}
           </Text>
           <Text style={[styles.uploadSub, { color: colors.textTertiary }]}>
-            Tap to select images of gold items
+            Photos upload to the server when you're online
           </Text>
         </TouchableOpacity>
+
+        {/* Pending sync note */}
+        {images.length > 0 && (
+          <View
+            style={[
+              styles.pendingNote,
+              { backgroundColor: colors.primaryLight, borderColor: colors.border },
+            ]}
+          >
+            <CloudOff size={14} color={colors.primary} />
+            <Text style={[styles.pendingNoteText, { color: colors.primary }]}>
+              {images.length} photo{images.length > 1 ? 's' : ''} queued for upload
+            </Text>
+          </View>
+        )}
 
         {/* Image previews */}
         {images.length > 0 && (
           <View style={styles.imagesRow}>
             {images.map((img, idx) => (
               <View key={idx} style={[styles.imageThumb, { backgroundColor: colors.surfaceSecondary }]}>
-                <Image source={{ uri: img.url }} style={styles.imagePreview} resizeMode="cover" />
+                <Image source={{ uri: img.localUri }} style={styles.imagePreview} resizeMode="cover" />
                 <TouchableOpacity
                   style={[styles.imageRemoveBtn, { backgroundColor: colors.errorLight }]}
                   onPress={() => removeImage(idx)}
@@ -413,8 +410,7 @@ export default function NewBandhakiScreen() {
         <Button
           title="Create Loan Entry"
           onPress={handleSubmit(onSubmit)}
-          loading={loading}
-          disabled={uploadingCount > 0}
+          loading={createLoan.isPending}
           fullWidth
           size="lg"
           style={{ marginTop: 24, marginBottom: 16, borderRadius: 6 }}
@@ -426,7 +422,6 @@ export default function NewBandhakiScreen() {
         onClose={() => setQuickAddVisible(false)}
         onCreated={(customer) => {
           setQuickAddVisible(false);
-          queryClient.invalidateQueries({ queryKey: ['customers'] });
           setValue('customer', customer._id);
         }}
       />
@@ -476,6 +471,17 @@ const styles = StyleSheet.create({
   },
   uploadTitle: { fontSize: 15, fontWeight: '600' },
   uploadSub: { fontSize: 12, marginTop: 4 },
+  pendingNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  pendingNoteText: { fontSize: 12, fontWeight: '600' },
   imagesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

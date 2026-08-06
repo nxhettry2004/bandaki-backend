@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,12 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQueryClient } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 import { ArrowLeft, UserPlus } from 'lucide-react-native';
 
 import { CustomerFormSchema, type CustomerFormSchemaType } from '../../src/schema/FormSchema';
-import { createCustomer } from '../../src/api/endpoints';
+import { createCustomerLocal } from '../../src/db/repositories/customers.repo';
+import { useSyncMutation } from '../../src/hooks/useSyncMutation';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
@@ -23,8 +23,6 @@ import { Button } from '../../src/components/ui/Button';
 export default function NewCustomerScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const [loading, setLoading] = useState(false);
 
   const {
     control,
@@ -40,29 +38,25 @@ export default function NewCustomerScreen() {
     },
   });
 
+  const createCustomer = useSyncMutation(
+    (data: CustomerFormSchemaType) => createCustomerLocal(data)
+  );
+
   const onSubmit = async (data: CustomerFormSchemaType) => {
-    setLoading(true);
     try {
-      const result = await createCustomer(data);
-      if (result.success) {
-        Toast.show({ type: 'success', text1: 'Customer created successfully!' });
-        queryClient.invalidateQueries({ queryKey: ['customers'] });
-        router.back();
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: result.message || 'Failed to create customer',
-        });
-      }
+      await createCustomer.mutateAsync(data);
+      Toast.show({
+        type: 'success',
+        text1: 'Customer created',
+        text2: 'Will sync to server when online',
+      });
+      router.back();
     } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error?.response?.data?.message || 'Something went wrong',
+        text2: error?.message || 'Something went wrong',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -147,7 +141,7 @@ export default function NewCustomerScreen() {
         <Button
           title="Create Customer"
           onPress={handleSubmit(onSubmit)}
-          loading={loading}
+          loading={createCustomer.isPending}
           fullWidth
           size="lg"
           style={{ marginTop: 24, borderRadius: 6 }}

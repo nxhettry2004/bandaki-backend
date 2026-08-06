@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
 import type { ImagePickerAsset } from "expo-image-picker";
@@ -32,22 +31,23 @@ import {
   CreditCard,
   Printer,
   Plus,
+  CloudOff,
 } from "lucide-react-native";
 
+import { deleteImageFromLoan } from "../../src/api/endpoints";
+import { useLoan } from "../../src/hooks/useLoans";
+import { usePaymentsForLoan } from "../../src/hooks/usePayments";
 import {
-  getBandhakiById,
-  getPaymentsByBandhaki,
-  deleteBandhaki,
-  addImageToLoan,
-  deleteImageFromLoan,
-} from "../../src/api/endpoints";
-import { uploadImageToCloudinary } from "../../src/api/cloudinary";
+  addImageLocal,
+  removePendingImageLocal,
+  softDeleteBandhakiLocal,
+} from "../../src/db/repositories/bandhaki.repo";
 import { useTheme } from "../../src/hooks/useTheme";
 import { useAuth } from "../../src/hooks/useAuth";
 import { Card } from "../../src/components/ui/Card";
 import { Button } from "../../src/components/ui/Button";
 import { StatusBadge } from "../../src/components/ui/StatusBadge";
-import type { DetailedLoanEntry, Payment } from "../../src/types";
+import type { Payment } from "../../src/types";
 import {
   generateLoanAgreementHtml,
   generatePaymentReceiptHtml,
@@ -76,7 +76,6 @@ export default function LoanDetailScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const [deleting, setDeleting] = useState(false);
@@ -88,27 +87,17 @@ export default function LoanDetailScreen() {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
 
-  // Fetch loan detail
   const {
     data: loanData,
     isLoading,
     isError,
     error,
     refetch,
-  } = useQuery({
-    queryKey: ["loan", id],
-    queryFn: () => getBandhakiById(id!),
-    enabled: !!id,
-  });
+  } = useLoan(id);
 
-  // Fetch payments
-  const { data: payments = [] } = useQuery({
-    queryKey: ["payments", id],
-    queryFn: () => getPaymentsByBandhaki(id!),
-    enabled: !!id,
-  });
+  const { data: payments = [] } = usePaymentsForLoan(id);
 
-  const loan: DetailedLoanEntry | null = loanData?.entry || null;
+  const loan = loanData?.entry || null;
 
   const openImagePreview = (index: number) => {
     setPreviewImageIndex(index);
@@ -183,17 +172,22 @@ export default function LoanDetailScreen() {
     setUploadingImages(true);
     try {
       for (const asset of assets) {
-        const uploaded = await uploadImageToCloudinary(asset);
-        const result = await addImageToLoan(loan._id, uploaded);
-        if (!result.success) throw new Error(result.message);
+        if (!asset.uri) continue;
+        await addImageLocal(loan.localId, {
+          localUri: asset.uri,
+          name: asset.fileName || "Photo",
+        });
       }
-      await queryClient.invalidateQueries({ queryKey: ["loan", id] });
-      Toast.show({ type: "success", text1: "Photo(s) added" });
+      Toast.show({
+        type: "success",
+        text1: "Photo(s) added",
+        text2: "Will upload when online",
+      });
     } catch (err: any) {
       Toast.show({
         type: "error",
-        text1: "Upload failed",
-        text2: err?.message || "Could not upload one or more images.",
+        text1: "Failed to add photos",
+        text2: err?.message || "Could not add one or more images.",
       });
     } finally {
       setUploadingImages(false);
@@ -229,23 +223,27 @@ export default function LoanDetailScreen() {
     ]);
   };
 
-  const handleDeleteImage = (imageId?: string) => {
-    if (!loan || !imageId) return;
+  const handleDeleteImage = (image: any) => {
+    if (!loan || !image) return;
     Alert.alert("Delete Image", "Are you sure you want to delete this image?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          setDeletingImageId(imageId);
+          setDeletingImageId(image.localId || image._id || "");
           try {
-            const result = await deleteImageFromLoan(loan._id, imageId);
-            if (result.success) {
-              await queryClient.invalidateQueries({ queryKey: ["loan", id] });
-              Toast.show({ type: "success", text1: "Image deleted" });
+            if (image.status === "synced" && image._id && loan.serverId) {
+              // Already on the server: delete it remotely.
+              const result = await deleteImageFromLoan(loan.serverId, image._id);
+              if (!result.success) {
+                throw new Error(result.message || "Delete failed");
+              }
             } else {
-              Toast.show({ type: "error", text1: "Delete failed", text2: result.message });
+              // Pending/unsynced: remove locally and drop its outbox job.
+              await removePendingImageLocal(loan.localId, image.localId);
             }
+            Toast.show({ type: "success", text1: "Image deleted" });
           } catch (err: any) {
             Toast.show({ type: "error", text1: "Delete failed", text2: err?.message });
           } finally {
@@ -268,23 +266,13 @@ export default function LoanDetailScreen() {
           onPress: async () => {
             setDeleting(true);
             try {
-              const result = await deleteBandhaki(id!);
-              if (result.success) {
-                Toast.show({
-                  type: "success",
-                  text1: "Loan deleted successfully",
-                });
-                queryClient.invalidateQueries({ queryKey: ["loans"] });
-                queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-                queryClient.invalidateQueries({ queryKey: ["activeLoans"] });
-                router.back();
-              } else {
-                Toast.show({
-                  type: "error",
-                  text1: "Failed to delete",
-                  text2: result.message,
-                });
-              }
+              await softDeleteBandhakiLocal(id!);
+              Toast.show({
+                type: "success",
+                text1: "Loan deleted",
+                text2: "Will sync to server when online",
+              });
+              router.back();
             } catch (err: any) {
               Toast.show({
                 type: "error",
@@ -888,7 +876,7 @@ export default function LoanDetailScreen() {
             <View style={styles.imageGrid}>
               {loan.images.map((img, index) => (
                 <View
-                  key={img._id || index}
+                  key={img.localId || img._id || index}
                   style={[
                     styles.imageItem,
                     {
@@ -902,7 +890,7 @@ export default function LoanDetailScreen() {
                     activeOpacity={0.85}
                   >
                     <Image
-                      source={{ uri: img.url }}
+                      source={{ uri: img.url || img.localUri }}
                       style={styles.imagePreview}
                       resizeMode="cover"
                     />
@@ -913,12 +901,32 @@ export default function LoanDetailScreen() {
                       📄 {img.name || `Image ${index + 1}`}
                     </Text>
                   </TouchableOpacity>
+                  {img.status !== "synced" && (
+                    <View
+                      style={[
+                        styles.imagePendingBadge,
+                        { backgroundColor: colors.primaryLight },
+                      ]}
+                    >
+                      <CloudOff size={10} color={colors.primary} />
+                      <Text
+                        style={[
+                          styles.imagePendingText,
+                          { color: colors.primary },
+                        ]}
+                      >
+                        Uploading…
+                      </Text>
+                    </View>
+                  )}
                   <TouchableOpacity
-                    onPress={() => handleDeleteImage(img._id)}
-                    disabled={deletingImageId === img._id}
+                    onPress={() => handleDeleteImage(img)}
+                    disabled={
+                      deletingImageId === (img.localId || img._id)
+                    }
                     style={[styles.imageRemoveBtn, { backgroundColor: "#FEE2E2" }]}
                   >
-                    {deletingImageId === img._id ? (
+                    {deletingImageId === (img.localId || img._id) ? (
                       <ActivityIndicator size="small" color={colors.error} />
                     ) : (
                       <Trash2 size={14} color={colors.error} />
@@ -1053,7 +1061,11 @@ export default function LoanDetailScreen() {
 
             <View style={styles.previewImageContainer}>
               <Image
-                source={{ uri: loan.images[previewImageIndex]?.url }}
+                source={{
+                  uri:
+                    loan.images[previewImageIndex]?.url ||
+                    loan.images[previewImageIndex]?.localUri,
+                }}
                 style={styles.previewImage}
                 resizeMode="contain"
               />
@@ -1315,6 +1327,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   imageItemText: { fontSize: 13 },
+  imagePendingBadge: {
+    position: "absolute",
+    top: 90,
+    left: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  imagePendingText: { fontSize: 9, fontWeight: "700" },
   previewOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.92)",

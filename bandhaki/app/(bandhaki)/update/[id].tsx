@@ -12,12 +12,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 import { ArrowLeft, AlertTriangle } from 'lucide-react-native';
 
 import { BandhakiFormSchema, type BandhakiFormSchemaType } from '../../../src/schema/FormSchema';
-import { getBandhakiById, updateBandhaki, getCustomers } from '../../../src/api/endpoints';
+import { updateBandhakiLocal } from '../../../src/db/repositories/bandhaki.repo';
+import { useSyncMutation } from '../../../src/hooks/useSyncMutation';
+import { useLoan } from '../../../src/hooks/useLoans';
+import { useCustomers } from '../../../src/hooks/useCustomers';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { Input } from '../../../src/components/ui/Input';
 import { Button } from '../../../src/components/ui/Button';
@@ -28,9 +30,7 @@ import { QuickAddCustomerModal } from '../../../src/components/QuickAddCustomerM
 export default function UpdateBandhakiScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [loading, setLoading] = useState(false);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   // Fetch existing loan data
@@ -38,17 +38,10 @@ export default function UpdateBandhakiScreen() {
     data: loanData,
     isLoading: loanLoading,
     isError,
-  } = useQuery({
-    queryKey: ['loan', id],
-    queryFn: () => getBandhakiById(id!),
-    enabled: !!id,
-  });
+  } = useLoan(id);
 
   // Fetch customers for the select
-  const { data: customers = [] } = useQuery({
-    queryKey: ['customers'],
-    queryFn: getCustomers,
-  });
+  const { data: customers = [] } = useCustomers();
 
   const loan = loanData?.entry;
 
@@ -78,13 +71,8 @@ export default function UpdateBandhakiScreen() {
   // Populate form when loan data is available
   useEffect(() => {
     if (loan) {
-      // Need to extract customer id - loan may have customerName but we need the customer _id
-      // The API returns DetailedLoanEntry which has customerName, not customer object
-      // We'll try to find the matching customer by name
-      const matchedCustomer = customers.find((c: any) => c.name === loan.customerName);
-
       reset({
-        customer: matchedCustomer?._id || '',
+        customer: loan.customerLocalId || '',
         loanDate: loan.loanDate ? loan.loanDate.split('T')[0] : '',
         principalAmount: loan.principalAmount,
         interestRate: loan.interestRate,
@@ -96,7 +84,7 @@ export default function UpdateBandhakiScreen() {
         images: loan.images || [],
       });
     }
-  }, [loan, customers, reset]);
+  }, [loan, reset]);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const loanDate = watch('loanDate');
@@ -106,31 +94,36 @@ export default function UpdateBandhakiScreen() {
     value: c._id,
   }));
 
-  const onSubmit = async (data: BandhakiFormSchemaType) => {
-    setLoading(true);
-    try {
-      const result = await updateBandhaki(id!, {
-        ...data,
+  const updateLoan = useSyncMutation(
+    (data: BandhakiFormSchemaType) =>
+      updateBandhakiLocal(id!, {
+        customerLocalId: data.customer,
+        loanDate: data.loanDate,
+        principalAmount: data.principalAmount,
+        interestRate: data.interestRate,
         interestType: data.interestType as 'simple' | 'compound',
         goldItems: [data.goldItems],
+        totalValuation: data.totalValuation,
+        status: data.status,
+        paymentStatus: data.paymentStatus,
+      })
+  );
+
+  const onSubmit = async (data: BandhakiFormSchemaType) => {
+    try {
+      await updateLoan.mutateAsync(data);
+      Toast.show({
+        type: 'success',
+        text1: 'Loan updated',
+        text2: 'Will sync to server when online',
       });
-      if (result.success) {
-        Toast.show({ type: 'success', text1: 'Loan updated successfully!' });
-        queryClient.invalidateQueries({ queryKey: ['loans'] });
-        queryClient.invalidateQueries({ queryKey: ['loan', id] });
-        queryClient.invalidateQueries({ queryKey: ['dashboardData'] });
-        router.back();
-      } else {
-        Toast.show({ type: 'error', text1: 'Error', text2: result.message || 'Failed to update loan' });
-      }
+      router.back();
     } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error?.response?.data?.message || 'Something went wrong',
+        text2: error?.message || 'Something went wrong',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -375,7 +368,7 @@ export default function UpdateBandhakiScreen() {
         <Button
           title="Update Loan Entry"
           onPress={handleSubmit(onSubmit)}
-          loading={loading}
+          loading={updateLoan.isPending}
           fullWidth
           size="lg"
           style={{ marginTop: 24, marginBottom: 16 }}
@@ -387,7 +380,6 @@ export default function UpdateBandhakiScreen() {
         onClose={() => setQuickAddVisible(false)}
         onCreated={(customer) => {
           setQuickAddVisible(false);
-          queryClient.invalidateQueries({ queryKey: ['customers'] });
           setValue('customer', customer._id);
         }}
       />
