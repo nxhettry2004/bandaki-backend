@@ -12,6 +12,8 @@ export interface IGoldItem {
 export interface IImage {
   name: string;
   url: string;
+  // Idempotency key for offline image-attach replay.
+  clientMutationId?: string;
 }
 
 export interface IBandhaki extends Document {
@@ -33,6 +35,9 @@ export interface IBandhaki extends Document {
   isClosed: boolean;
   createdBy: mongoose.Types.ObjectId;
   tenantId: mongoose.Types.ObjectId;
+  // Soft-delete tombstone and idempotency key for offline-create replay.
+  deletedAt?: Date | null;
+  clientMutationId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +77,7 @@ const BandhakiSchema: Schema = new Schema(
       {
         name: { type: String, required: true },
         url: { type: String, required: true },
+        clientMutationId: { type: String },
       },
     ],
     totalValuation: { type: Number, default: 0 },
@@ -84,6 +90,8 @@ const BandhakiSchema: Schema = new Schema(
     paymentStatus: { type: String, required: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     tenantId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    deletedAt: { type: Date, default: null },
+    clientMutationId: { type: String },
   },
   { timestamps: true }
 );
@@ -91,6 +99,12 @@ const BandhakiSchema: Schema = new Schema(
 BandhakiSchema.index({ tenantId: 1, status: 1 });
 BandhakiSchema.index({ tenantId: 1, createdAt: -1 });
 BandhakiSchema.index({ tenantId: 1, customer: 1 });
+BandhakiSchema.index({ tenantId: 1, updatedAt: 1 });
+BandhakiSchema.index({ tenantId: 1, deletedAt: 1 });
+BandhakiSchema.index(
+  { tenantId: 1, clientMutationId: 1 },
+  { unique: true, sparse: true }
+);
 
 BandhakiSchema.pre("save", async function () {
   if (!this.isNew) return; // Only generate loan number for new documents

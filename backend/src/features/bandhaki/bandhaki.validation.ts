@@ -9,6 +9,8 @@ const GoldItemSchema = z.object({
 const ImageSchema = z.object({
   name: z.string().min(1),
   url: z.string().min(1),
+  // Idempotency key minted client-side by the offline outbox.
+  clientMutationId: z.string().optional(),
 });
 
 export const CreateBandhakiSchema = z.object({
@@ -22,6 +24,8 @@ export const CreateBandhakiSchema = z.object({
   totalValuation: z.number().optional(),
   status: z.enum(["active", "closed", "defaulted"]).default("active"),
   paymentStatus: z.string().default("pending"),
+  // Idempotency key for the loan create itself.
+  clientMutationId: z.string().optional(),
 });
 
 export const UpdateBandhakiSchema = z.object({
@@ -40,6 +44,8 @@ export const UpdateBandhakiSchema = z.object({
 export const AddImageSchema = z.object({
   url: z.string().min(1, "URL is required"),
   name: z.string().min(1, "Filename is required"),
+  // Idempotency key minted client-side by the offline outbox.
+  clientMutationId: z.string().optional(),
 });
 
 export type CreateBandhakiInput = z.infer<typeof CreateBandhakiSchema>;

@@ -11,6 +11,8 @@ router.use(authenticate);
 
 router.post("/", validate(CreateCustomerSchema), controller.create);
 router.get("/", controller.getAll);
+// Incremental pull-sync — must be registered before the "/:id" route.
+router.get("/sync", controller.getUpdatesSince);
 router.get("/:id", controller.getById);
 router.put("/:id", validate(UpdateCustomerSchema), controller.update);
 router.delete("/:id", controller.delete);

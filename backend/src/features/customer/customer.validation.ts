@@ -6,6 +6,8 @@ export const CreateCustomerSchema = z.object({
   address: z.string().optional(),
   idProof: z.string().optional(),
   photoUrl: z.string().optional(),
+  // Idempotency key minted client-side by the offline outbox.
+  clientMutationId: z.string().optional(),
 });
 
 export const UpdateCustomerSchema = CreateCustomerSchema;

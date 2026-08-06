@@ -14,6 +14,19 @@ export class BandhakiService {
   }
 
   async create(data: CreateBandhakiInput, tenantId: string, username: string) {
+    // Idempotency: a replayed offline create with the same key returns the
+    // already-saved loan instead of minting a duplicate (and a duplicate loan
+    // number via the counter).
+    if (data.clientMutationId) {
+      const existing = await this.bandhakiRepo.findByClientMutationId(
+        data.clientMutationId,
+        tenantId
+      );
+      if (existing) {
+        return this.toCreateResponse(existing);
+      }
+    }
+
     // Verify customer exists
     const customer = await CustomerModel.findById(data.customer);
     if (!customer) {
@@ -41,12 +54,23 @@ export class BandhakiService {
       paymentStatus: data.paymentStatus,
       createdBy: userDoc._id,
       tenantId: tenantId as any,
+      clientMutationId: data.clientMutationId,
     });
+
+    return this.toCreateResponse(savedBandhaki, customer);
+  }
+
+  private toCreateResponse(savedBandhaki: any, customerOverride?: any) {
+    const customer =
+      customerOverride ??
+      (typeof savedBandhaki.customer === "object" && savedBandhaki.customer
+        ? savedBandhaki.customer
+        : null);
 
     return {
       _id: savedBandhaki._id.toString(),
       loanNumber: savedBandhaki.loanNumber,
-      loanDate: savedBandhaki.loanDate.toISOString(),
+      loanDate: new Date(savedBandhaki.loanDate).toISOString(),
       principalAmount: savedBandhaki.principalAmount,
       interestRate: savedBandhaki.interestRate,
       interestType: savedBandhaki.interestType,
@@ -55,10 +79,10 @@ export class BandhakiService {
       status: savedBandhaki.status,
       paymentStatus: savedBandhaki.paymentStatus,
       customer: {
-        _id: customer._id.toString(),
-        name: customer.name,
-        phone: customer.phone,
-        address: customer.address || "",
+        _id: (customer?._id ?? savedBandhaki.customer)?.toString(),
+        name: customer?.name,
+        phone: customer?.phone,
+        address: customer?.address || "",
       },
     };
   }
@@ -273,5 +297,79 @@ export class BandhakiService {
     if (!result) {
       throw ApiError.notFound("Loan entry not found");
     }
+  }
+
+  async getUpdatesSince(tenantId: string, since?: Date): Promise<{
+    upserts: Array<{
+      _id: string;
+      customer: { _id: string; name: string; phone?: string; address?: string } | null;
+      loanNumber: string;
+      loanDate: string;
+      lastInterestPaidDate: string;
+      principalAmount: number;
+      outstandingPrincipal: number;
+      outstandingInterest: number;
+      interestRate: number;
+      interestType: string;
+      status: string;
+      paymentStatus: string;
+      totalPaidAmount: number;
+      goldItems: any[];
+      images: any[];
+      totalValuation: number;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+    deletedIds: string[];
+    serverTime: string;
+  }> {
+    // Capture start time before running queries so the returned cursor never
+    // loses writes landing during this request's own execution window.
+    const queryStartTime = new Date();
+    const cursor = since ?? new Date(0);
+    const upserts = await this.bandhakiRepo.findUpsertsSince(tenantId, cursor);
+    const deletedIds = await this.bandhakiRepo.findDeletedIdsSince(tenantId, cursor);
+    return {
+      upserts: upserts.map((entry) => this.toSyncShape(entry)),
+      deletedIds,
+      serverTime: queryStartTime.toISOString(),
+    };
+  }
+
+  private toSyncShape(entry: any) {
+    const customer = entry.customer as any;
+    const iso = (d: any) => (d ? new Date(d).toISOString() : new Date(0).toISOString());
+    return {
+      _id: entry._id.toString(),
+      customer: customer
+        ? {
+            _id: (customer._id ?? customer).toString(),
+            name: customer.name,
+            phone: customer.phone,
+            address: customer.address,
+          }
+        : null,
+      loanNumber: entry.loanNumber,
+      loanDate: iso(entry.loanDate),
+      lastInterestPaidDate: iso(entry.lastInterestPaidDate),
+      principalAmount: entry.principalAmount,
+      outstandingPrincipal: entry.outstandingPrincipal,
+      outstandingInterest: entry.outstandingInterest || 0,
+      interestRate: entry.interestRate,
+      interestType: entry.interestType,
+      status: entry.status,
+      paymentStatus: entry.paymentStatus,
+      totalPaidAmount: entry.totalPaidAmount || 0,
+      goldItems: entry.goldItems || [],
+      images: (entry.images || []).map((img: any) => ({
+        _id: (img._id ?? "").toString(),
+        name: img.name,
+        url: img.url,
+        clientMutationId: img.clientMutationId ?? null,
+      })),
+      totalValuation: entry.totalValuation || 0,
+      createdAt: iso(entry.createdAt),
+      updatedAt: iso(entry.updatedAt),
+    };
   }
 }

@@ -14,6 +14,19 @@ export class PaymentService {
   }
 
   async create(data: CreatePaymentInput, tenantId: string): Promise<{ paymentId: string }> {
+    // Idempotency: payments mutate the loan balance, so a replayed offline
+    // create must short-circuit BEFORE any balance mutation. Return the
+    // already-created payment's id so the outbox sees a success.
+    if (data.clientMutationId) {
+      const existing = await this.paymentRepo.findByClientMutationId(
+        data.clientMutationId,
+        tenantId
+      );
+      if (existing) {
+        return { paymentId: existing._id.toString() };
+      }
+    }
+
     const TOLERANCE_PRICE = env.TOLERANCE_PRICE;
 
     // Verify bandhaki entry exists and belongs to tenant
@@ -119,6 +132,7 @@ export class PaymentService {
       paymentMethod: data.paymentMethod,
       notes: data.notes,
       tenantId: tenantId as any,
+      clientMutationId: data.clientMutationId,
     });
 
     // Save updated bandhaki
@@ -133,5 +147,45 @@ export class PaymentService {
 
   async getRecent(tenantId: string, limit = 5): Promise<IPayment[]> {
     return this.paymentRepo.findRecentByTenant(tenantId, limit);
+  }
+
+  async getUpdatesSince(tenantId: string, since?: Date): Promise<{
+    upserts: Array<{
+      _id: string;
+      bandhaki: string;
+      paymentDate: string;
+      amount: number;
+      interestComponent: number;
+      principalComponent: number;
+      paymentMethod: string;
+      notes?: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+    deletedIds: string[];
+    serverTime: string;
+  }> {
+    // Capture start time before running queries so the returned cursor never
+    // loses writes landing during this request's own execution window.
+    const queryStartTime = new Date();
+    const cursor = since ?? new Date(0);
+    const upserts = await this.paymentRepo.findUpsertsSince(tenantId, cursor);
+    const iso = (d: any) => (d ? new Date(d).toISOString() : new Date(0).toISOString());
+    return {
+      upserts: upserts.map((p) => ({
+        _id: p._id.toString(),
+        bandhaki: p.bandhaki.toString(),
+        paymentDate: iso(p.paymentDate),
+        amount: p.amount,
+        interestComponent: p.interestComponent || 0,
+        principalComponent: p.principalComponent || 0,
+        paymentMethod: p.paymentMethod,
+        notes: p.notes ?? null,
+        createdAt: iso(p.createdAt),
+        updatedAt: iso(p.updatedAt),
+      })),
+      deletedIds: [],
+      serverTime: queryStartTime.toISOString(),
+    };
   }
 }

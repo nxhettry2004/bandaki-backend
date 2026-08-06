@@ -8,6 +8,8 @@ export const CreatePaymentSchema = z.object({
   principalComponent: z.number().optional(),
   paymentMethod: z.string().min(1, "Payment method is required"),
   notes: z.string().optional(),
+  // Idempotency key minted client-side by the offline outbox.
+  clientMutationId: z.string().optional(),
 });
 
 export type CreatePaymentInput = z.infer<typeof CreatePaymentSchema>;
